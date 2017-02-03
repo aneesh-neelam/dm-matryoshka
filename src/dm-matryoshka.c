@@ -3,6 +3,13 @@
 
 #include <linux/kernel.h>
 
+#define DRIVER_AUTHOR "Aneesh Neelam <aneelam@ucsc.edu>"
+#define DRIVER_DESC   "Device Mapper for Matryoshka"
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR(DRIVER_AUTHOR);
+MODULE_DESCRIPTION(DRIVER_DESC);
+
 static int __init dm_matryoshka_init(void) {
   printk(KERN_INFO "Init Matryoshka Device Mapper\n");
   return 0;
