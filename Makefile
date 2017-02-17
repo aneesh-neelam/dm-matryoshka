@@ -3,7 +3,7 @@ KDIR ?= /lib/modules/$(shell uname -r)/build
 obj-m += dm-matryoshka.o
 dm-matryoshka-objs := ./src/dm-matryoshka.o
 
-all: 
+all:
 	make -C $(KDIR) M=$(PWD) modules
 
 clean:

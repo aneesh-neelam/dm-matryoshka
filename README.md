@@ -1,5 +1,4 @@
 Matryoshka - Linux Device Mapper
 ================================
 
-The device mapper for Matryoshka. 
-
+The device mapper for Matryoshka.
