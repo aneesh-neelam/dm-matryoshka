@@ -4,11 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/device-mapper.h>
 
-#define DM_MSG_PREFIX "matryoshka"
-#define NAME "Matryoshka"
-#define LICENSE "GPL"
-#define DESCRIPTION "Matryoshka Device Mapper"
-#define AUTHOR "Aneesh Neelam <aneelam@ucsc.edu>"
+#include "../include/dm-matryoshka.h"
 
 
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
