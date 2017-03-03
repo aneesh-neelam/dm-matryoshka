@@ -1,5 +1,5 @@
 #define DM_MSG_PREFIX "matryoshka"
 #define NAME "Matryoshka"
-#define LICENSE "GPL"
+#define LICENSE "Dual BSD/GPL"
 #define DESCRIPTION "Matryoshka Device Mapper"
 #define AUTHOR "Aneesh Neelam <aneelam@ucsc.edu>"
