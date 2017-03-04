@@ -1,6 +1,6 @@
 MODULESDIR = /lib/modules/$(shell uname -r)
 KDIR ?= $(MODULESDIR)/build
-INSTALLDIR = $(MODULESDIR)/extra
+INSTALLDIR = $(MODULESDIR)/
 module = dm-matryoshka
 obj-m += $(module).o
 dm-matryoshka-objs := ./src/$(module).o
