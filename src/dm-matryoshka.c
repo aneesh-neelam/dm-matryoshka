@@ -7,12 +7,56 @@
 #include "../include/dm-matryoshka.h"
 
 
+/*
+ * Construct a matryoshka mapping: <dev_path> <offset>
+ */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
+  struct matryoshka_c *mc;
+  unsigned long long tmp;
+  char dummy;
+  int ret;
+
+  if (argc != 2) {
+    ti -> error = "Invalid number of arguments";
+    return -EINVAL;
+  }
+  
+  mc = kmalloc(sizeof(*mc), GFP_KERNEL);
+  if (mc == NULL) {
+    ti -> error = "Cannot allocate matryoshka context";
+    return -ENOMEM;
+  }
+
+  ret = -EINVAL;
+  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
+    ti -> error = "Invalid device sector";
+    goto bad;
+  }
+  mc -> start = tmp;
+
+  ret = dm_get_device(ti, argv[0], dm_table_get_mode(ti -> table), &mc -> dev);
+  if (ret) {
+    ti->error = "Device lookup failed";
+    goto bad;
+  }
+
+  ti->num_flush_bios = 1;
+  ti->num_discard_bios = 1;
+  ti->num_write_same_bios = 1;
+  ti->private = mc;
+  
   return 0;
+
+  bad: 
+    kfree(mc);
+    return ret;
 }
 
 static void matryoshka_dtr(struct dm_target *ti) {
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
+  dm_put_device(ti, mc -> dev);
+  kfree(mc);
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
