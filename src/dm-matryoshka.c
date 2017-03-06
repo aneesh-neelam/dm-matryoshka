@@ -8,6 +8,24 @@
 
 
 /*
+ * Helper functions, taken from dm-linear: Just trying out stuff to understand device-mapper.h
+ */
+static sector_t linear_map_sector(struct dm_target *ti, sector_t bi_sector) {
+  struct matryoshka_c *mc = ti -> private;
+
+  return mc -> start + dm_target_offset(ti, bi_sector);
+}
+
+static void linear_map_bio(struct dm_target *ti, struct bio *bio) {
+ 	struct matryoshka_c *mc = ti -> private;
+
+ 	bio -> bi_bdev = mc -> dev -> bdev;
+ 	if (bio_sectors(bio)) {
+ 		bio -> bi_iter.bi_sector = linear_map_sector(ti, bio -> bi_iter.bi_sector);
+  }
+}
+
+/*
  * Construct a matryoshka mapping: <dev_path> <offset>
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
@@ -20,7 +38,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     ti -> error = "Invalid number of arguments";
     return -EINVAL;
   }
-  
+
   mc = kmalloc(sizeof(*mc), GFP_KERNEL);
   if (mc == NULL) {
     ti -> error = "Cannot allocate matryoshka context";
@@ -36,18 +54,18 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   ret = dm_get_device(ti, argv[0], dm_table_get_mode(ti -> table), &mc -> dev);
   if (ret) {
-    ti->error = "Device lookup failed";
+    ti -> error = "Device lookup failed";
     goto bad;
   }
 
-  ti->num_flush_bios = 1;
-  ti->num_discard_bios = 1;
-  ti->num_write_same_bios = 1;
-  ti->private = mc;
-  
+  ti -> num_flush_bios = 1;
+  ti -> num_discard_bios = 1;
+  ti -> num_write_same_bios = 1;
+  ti -> private = mc;
+
   return 0;
 
-  bad: 
+  bad:
     kfree(mc);
     return ret;
 }
@@ -60,37 +78,61 @@ static void matryoshka_dtr(struct dm_target *ti) {
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
-  return 0;
+  linear_map_bio(ti, bio);
+
+	return DM_MAPIO_REMAPPED;
 }
 
 static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
+  struct matryoshka_c *mc = ti -> private;
 
-}
+  switch (type) {
+    case STATUSTYPE_INFO:
+      result[0] = '\0';
+      break;
 
-static void matryoshka_postsuspend(struct dm_target *ti) {
-
-}
-
-static int matryoshka_preresume(struct dm_target *ti) {
-  return 0;
-}
-
-static void matryoshka_resume(struct dm_target *ti) {
-
-}
-
-static int matryoshka_message(struct dm_target *ti, unsigned argc, char **argv) {
-  return 0;
+    case STATUSTYPE_TABLE:
+      snprintf(result, maxlen, "%s %llu", mc -> dev -> name, (unsigned long long) mc -> start);
+      break;
+  }
 }
 
 static int matryoshka_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data) {
-  return 0;
+  struct matryoshka_c *mc = ti -> private;
+
+  return fn(ti, mc -> dev, mc -> start, ti-> len, data);
 }
 
-static void matryoshka_io_hints(struct dm_target *ti, struct queue_limits *limits) {
+static int matryoshka_prepare_ioctl(struct dm_target *ti, struct block_device **bdev, fmode_t *mode) {
+  struct matryoshka_c *mc = ti -> private;
+  struct dm_dev *dev = mc -> dev;
 
+  *bdev = dev -> bdev;
+
+  /*
+	 * Only pass ioctls through if the device sizes match exactly.
+	 */
+	if (mc -> start || ti -> len != i_size_read(dev -> bdev -> bd_inode) >> SECTOR_SHIFT) {
+		return 1;
+  }
+	return 0;
 }
 
+static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void **kaddr, pfn_t *pfn, long size) {
+  struct matryoshka_c *mc = ti -> private;
+  struct block_device *bdev = mc -> dev -> bdev;
+  struct blk_dax_ctl dax = {
+    .sector = linear_map_sector(ti, sector),
+    .size = size,
+  };
+  long ret;
+
+  ret = bdev_direct_access(bdev, &dax);
+  *kaddr = dax.addr;
+  *pfn = dax.pfn;
+
+  return ret;
+}
 
 static struct target_type matryoshka_target = {
   .name   = NAME,
@@ -100,12 +142,9 @@ static struct target_type matryoshka_target = {
   .dtr    = matryoshka_dtr,
   .map    = matryoshka_map,
   .status = matryoshka_status,
-  .postsuspend = matryoshka_postsuspend,
-  .preresume = matryoshka_preresume,
-  .resume = matryoshka_resume,
-  .message = matryoshka_message,
   .iterate_devices = matryoshka_iterate_devices,
-  .io_hints = matryoshka_io_hints,
+  .prepare_ioctl = matryoshka_prepare_ioctl,
+  .direct_access = matryoshka_direct_access,
 };
 
 static int __init dm_matryoshka_init(void) {

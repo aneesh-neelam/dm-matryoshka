@@ -5,7 +5,7 @@
 #define AUTHOR "Aneesh Neelam <aneelam@ucsc.edu>"
 
 /*
- * Matryoshka: Maps in the Matryoshka way. 
+ * Matryoshka: Maps in the Matryoshka way.
  */
 struct matryoshka_c {
         struct dm_dev *dev;
