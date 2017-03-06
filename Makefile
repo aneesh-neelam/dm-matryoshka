@@ -21,7 +21,7 @@ dm-matryoshka-objs := ./src/$(module).o
 all:
 	make -C $(KDIR) M=$(PWD) modules
 
-sign: 
+sign:
 	$(KDIR)/scripts/sign-file sha256 $(PRIVATEKEYFILE) $(PUBLICKEYFILE) $(module).ko
 
 install:
