@@ -136,7 +136,7 @@ static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void
 
 static struct target_type matryoshka_target = {
   .name   = NAME,
-  .version = {1, 0, 0},
+  .version = {VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH},
   .module = THIS_MODULE,
   .ctr    = matryoshka_ctr,
   .dtr    = matryoshka_dtr,
@@ -149,7 +149,7 @@ static struct target_type matryoshka_target = {
 
 static int __init dm_matryoshka_init(void) {
   int status;
-  printk(KERN_INFO "Init Matryoshka Device Mapper\n");
+  printk(KERN_INFO "Loading Matryoshka Device Mapper, Version: %u.%u.%u \n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
   status = dm_register_target(&matryoshka_target);
   if (status < 0) {
     DMERR("Failed to Register Matryoshka Device Mapper: %d", status);
@@ -158,7 +158,7 @@ static int __init dm_matryoshka_init(void) {
 }
 
 static void __exit dm_matryoshka_exit(void) {
-  printk(KERN_INFO "Exit Matryoshka Device Mapper\n");
+  printk(KERN_INFO "Unloading Matryoshka Device Mapper \n");
   dm_unregister_target(&matryoshka_target);
 }
 
