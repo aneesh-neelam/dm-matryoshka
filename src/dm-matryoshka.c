@@ -81,7 +81,7 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
 
   switch (bio_op(bio)) {
 
-    case REQ_OP_WRITE:
+    case REQ_OP_READ:
       // Read Operation
       break;
 
