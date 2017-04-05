@@ -78,9 +78,30 @@ static void matryoshka_dtr(struct dm_target *ti) {
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
+
+  switch (bio_op(bio)) {
+
+    case REQ_OP_WRITE:
+      // Read Operation
+      break;
+
+    case REQ_OP_WRITE:
+      // Write Operation
+      break;
+      
+    default:
+      return -EIO;
+  }
+
+  bio_endio(bio);
+
+  return DM_MAPIO_SUBMITTED;
+
+  /*
   linear_map_bio(ti, bio);
 
 	return DM_MAPIO_REMAPPED;
+  */
 }
 
 static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
