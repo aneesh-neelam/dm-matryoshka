@@ -34,7 +34,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   passphrase_length = strlen(argv[0]);
   mc -> passphrase = kmalloc(passphrase_length, GFP_KERNEL);
   strncpy(mc -> passphrase, argv[0], passphrase_length);
-  passphrase[passphrase_length] = '\0';
+  mc -> passphrase[passphrase_length] = '\0';
 
   ret1 = ret2 = -EINVAL;
 
