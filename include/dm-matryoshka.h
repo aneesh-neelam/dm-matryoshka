@@ -12,6 +12,9 @@
  * Matryoshka: Maps in the Matryoshka way.
  */
 struct matryoshka_c {
-        struct dm_dev *dev;
-        sector_t start;
+
+  char *passphrase;
+
+  struct dm_dev *entropy;
+  struct dm_dev *carrier;
 };

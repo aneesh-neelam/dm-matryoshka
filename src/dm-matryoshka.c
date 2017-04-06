@@ -1,59 +1,46 @@
-#include <linux/module.h>
-#include <linux/init.h>
-
-#include <linux/kernel.h>
 #include <linux/device-mapper.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/string.h>
 
 #include "../include/dm-matryoshka.h"
 
 
 /*
- * Helper functions, taken from dm-linear: Just trying out stuff to understand device-mapper.h
+ * Helper functions for dm-matryoshka
  */
-static sector_t linear_map_sector(struct dm_target *ti, sector_t bi_sector) {
-  struct matryoshka_c *mc = ti -> private;
 
-  return mc -> start + dm_target_offset(ti, bi_sector);
-}
-
-static void linear_map_bio(struct dm_target *ti, struct bio *bio) {
- 	struct matryoshka_c *mc = ti -> private;
-
- 	bio -> bi_bdev = mc -> dev -> bdev;
- 	if (bio_sectors(bio)) {
- 		bio -> bi_iter.bi_sector = linear_map_sector(ti, bio -> bi_iter.bi_sector);
-  }
-}
 
 /*
- * Construct a matryoshka mapping: <dev_path> <offset>
+ * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
   struct matryoshka_c *mc;
-  unsigned long long tmp;
-  char dummy;
-  int ret;
+  int ret1, ret2;
+  int passphrase_length;
 
   if (argc != 2) {
-    ti -> error = "Invalid number of arguments";
+    ti -> error = "Invalid number of arguments for dm-matryoshka constructor";
     return -EINVAL;
   }
 
   mc = kmalloc(sizeof(*mc), GFP_KERNEL);
   if (mc == NULL) {
-    ti -> error = "Cannot allocate matryoshka context";
+    ti -> error = "Cannot allocate dm-matryoshka context";
     return -ENOMEM;
   }
 
-  ret = -EINVAL;
-  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
-    ti -> error = "Invalid device sector";
-    goto bad;
-  }
-  mc -> start = tmp;
+  passphrase_length = strlen(argv[0]);
+  mc -> passphrase = kmalloc(passphrase_length, GFP_KERNEL);
+  strncpy(mc -> passphrase, argv[0], passphrase_length);
+  passphrase[passphrase_length] = '\0';
 
-  ret = dm_get_device(ti, argv[0], dm_table_get_mode(ti -> table), &mc -> dev);
-  if (ret) {
+  ret1 = ret2 = -EINVAL;
+
+  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> entropy);
+  ret2 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> carrier);
+  if (ret1 || ret2) {
     ti -> error = "Device lookup failed";
     goto bad;
   }
@@ -67,13 +54,13 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   bad:
     kfree(mc);
-    return ret;
+    return ret1 && ret2;
 }
 
 static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
-  dm_put_device(ti, mc -> dev);
+  dm_put_device(ti, mc -> carrier);
   kfree(mc);
 }
 
@@ -88,7 +75,7 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
     case REQ_OP_WRITE:
       // Write Operation
       break;
-      
+
     default:
       return -EIO;
   }
