@@ -92,6 +92,7 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
 }
 
 static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
+  /*
   struct matryoshka_c *mc = ti -> private;
 
   switch (type) {
@@ -103,30 +104,37 @@ static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned
       snprintf(result, maxlen, "%s %llu", mc -> dev -> name, (unsigned long long) mc -> start);
       break;
   }
+  */
 }
 
 static int matryoshka_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data) {
+  /*
   struct matryoshka_c *mc = ti -> private;
 
   return fn(ti, mc -> dev, mc -> start, ti-> len, data);
+  */
+  return 0;
 }
 
 static int matryoshka_prepare_ioctl(struct dm_target *ti, struct block_device **bdev, fmode_t *mode) {
+  /*
   struct matryoshka_c *mc = ti -> private;
   struct dm_dev *dev = mc -> dev;
 
   *bdev = dev -> bdev;
 
-  /*
-	 * Only pass ioctls through if the device sizes match exactly.
-	 */
+
+	  Only pass ioctls through if the device sizes match exactly.
+
 	if (mc -> start || ti -> len != i_size_read(dev -> bdev -> bd_inode) >> SECTOR_SHIFT) {
 		return 1;
   }
+  */
 	return 0;
 }
 
 static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void **kaddr, pfn_t *pfn, long size) {
+  /*
   struct matryoshka_c *mc = ti -> private;
   struct block_device *bdev = mc -> dev -> bdev;
   struct blk_dax_ctl dax = {
@@ -140,6 +148,8 @@ static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void
   *pfn = dax.pfn;
 
   return ret;
+  */
+  return 0;
 }
 
 static struct target_type matryoshka_target = {
