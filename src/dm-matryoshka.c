@@ -61,6 +61,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   dm_put_device(ti, mc -> carrier);
+  dm_put_device(ti, mc -> entropy);
   kfree(mc);
 }
 
@@ -83,72 +84,21 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   bio_endio(bio);
 
   return DM_MAPIO_SUBMITTED;
-
-  /*
-  linear_map_bio(ti, bio);
-
-	return DM_MAPIO_REMAPPED;
-  */
 }
 
 static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
-  /*
-  struct matryoshka_c *mc = ti -> private;
 
-  switch (type) {
-    case STATUSTYPE_INFO:
-      result[0] = '\0';
-      break;
-
-    case STATUSTYPE_TABLE:
-      snprintf(result, maxlen, "%s %llu", mc -> dev -> name, (unsigned long long) mc -> start);
-      break;
-  }
-  */
 }
 
 static int matryoshka_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data) {
-  /*
-  struct matryoshka_c *mc = ti -> private;
-
-  return fn(ti, mc -> dev, mc -> start, ti-> len, data);
-  */
   return 0;
 }
 
 static int matryoshka_prepare_ioctl(struct dm_target *ti, struct block_device **bdev, fmode_t *mode) {
-  /*
-  struct matryoshka_c *mc = ti -> private;
-  struct dm_dev *dev = mc -> dev;
-
-  *bdev = dev -> bdev;
-
-
-	  Only pass ioctls through if the device sizes match exactly.
-
-	if (mc -> start || ti -> len != i_size_read(dev -> bdev -> bd_inode) >> SECTOR_SHIFT) {
-		return 1;
-  }
-  */
 	return 0;
 }
 
 static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void **kaddr, pfn_t *pfn, long size) {
-  /*
-  struct matryoshka_c *mc = ti -> private;
-  struct block_device *bdev = mc -> dev -> bdev;
-  struct blk_dax_ctl dax = {
-    .sector = linear_map_sector(ti, sector),
-    .size = size,
-  };
-  long ret;
-
-  ret = bdev_direct_access(bdev, &dax);
-  *kaddr = dax.addr;
-  *pfn = dax.pfn;
-
-  return ret;
-  */
   return 0;
 }
 
@@ -167,16 +117,16 @@ static struct target_type matryoshka_target = {
 
 static int __init dm_matryoshka_init(void) {
   int status;
-  printk(KERN_INFO "Loading Matryoshka Device Mapper, Version: %u.%u.%u \n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+  printk(KERN_INFO "dm-matryoshka: Registering device mapper target, version: %u.%u.%u \n", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
   status = dm_register_target(&matryoshka_target);
   if (status < 0) {
-    DMERR("Failed to Register Matryoshka Device Mapper: %d", status);
+    DMERR("dm-matryoshka: Failed to register device mapper target: %d \n", status);
   }
   return status;
 }
 
 static void __exit dm_matryoshka_exit(void) {
-  printk(KERN_INFO "Unloading Matryoshka Device Mapper \n");
+  printk(KERN_INFO "dm-matryoshka: Unloading device mapper \n");
   dm_unregister_target(&matryoshka_target);
 }
 
