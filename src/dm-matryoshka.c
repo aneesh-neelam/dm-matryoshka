@@ -10,7 +10,15 @@
 /*
  * Helper functions for dm-matryoshka
  */
+static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+  // TODO
+  return 0;
+}
 
+static int matryoshka_write(struct dm_target *ti, struct bio *bio) {
+  // TODO
+  return 0;
+}
 
 /*
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
@@ -71,18 +79,23 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
 
     case REQ_OP_READ:
       // Read Operation
+      status = matryoshka_read(ti, bio);
       break;
 
     case REQ_OP_WRITE:
       // Write Operation
+      status = matryoshka_read(ti, bio);
       break;
 
     default:
-      return -EIO;
+      status = -EIO;
+  }
+
+  if (status != 0) {
+    return status;
   }
 
   bio_endio(bio);
-
   return DM_MAPIO_SUBMITTED;
 }
 

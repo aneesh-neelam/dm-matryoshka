@@ -18,3 +18,7 @@ struct matryoshka_c {
   struct dm_dev *entropy;
   struct dm_dev *carrier;
 };
+
+static int get_entropy_blocks(struct dm_dev*);
+static int matryoshka_read(struct dm_target*, struct bio*);
+static int matryoshka_write(struct dm_target*, struct bio*);
