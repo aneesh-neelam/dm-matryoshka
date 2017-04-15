@@ -74,7 +74,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
-
+  int status;
   switch (bio_op(bio)) {
 
     case REQ_OP_READ:
