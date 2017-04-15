@@ -4,7 +4,7 @@
 #include <linux/module.h>
 #include <linux/string.h>
 
-#include "../include/dm-matryoshka.h"
+#include "../include/matryoshka.h"
 
 
 /*
