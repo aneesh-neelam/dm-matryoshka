@@ -20,8 +20,10 @@ static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
   int freelist_status;
 
-  entropy_status = get_entropy_blocks(ti -> private -> entropy);
-  freelist_status = vfat_get_free_blocks(ti -> private -> carrier);
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
+  entropy_status = get_entropy_blocks(mc -> entropy);
+  freelist_status = vfat_get_free_blocks(mc -> carrier);
 
   // TODO
 
@@ -32,8 +34,10 @@ static int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
   int freelist_status;
 
-  entropy_status = get_entropy_blocks(ti -> private -> entropy);
-  freelist_status = vfat_get_free_blocks(ti -> private -> carrier);
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
+  entropy_status = get_entropy_blocks(mc -> entropy);
+  freelist_status = vfat_get_free_blocks(mc -> carrier);
 
   // TODO
 
