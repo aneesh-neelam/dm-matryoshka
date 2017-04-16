@@ -10,13 +10,33 @@
 /*
  * Helper functions for dm-matryoshka
  */
-static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+static int get_entropy_blocks(struct dm_dev *entropy) {
   // TODO
+
+  return 0;
+}
+
+static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+  int entropy_status;
+  int freelist_status;
+
+  entropy_status = get_entropy_blocks(ti -> private -> entropy);
+  freelist_status = vfat_get_free_blocks(ti -> private -> carrier);
+
+  // TODO
+
   return 0;
 }
 
 static int matryoshka_write(struct dm_target *ti, struct bio *bio) {
+  int entropy_status;
+  int freelist_status;
+
+  entropy_status = get_entropy_blocks(ti -> private -> entropy);
+  freelist_status = vfat_get_free_blocks(ti -> private -> carrier);
+
   // TODO
+
   return 0;
 }
 
@@ -24,6 +44,8 @@ static int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
+  // TODO regular filesystem type, assumed to be vfat for now
+
   struct matryoshka_c *mc;
   int ret1, ret2;
   int passphrase_length;
@@ -84,7 +106,7 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
 
     case REQ_OP_WRITE:
       // Write Operation
-      status = matryoshka_read(ti, bio);
+      status = matryoshka_write(ti, bio);
       break;
 
     default:
