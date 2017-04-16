@@ -5,6 +5,7 @@
 #include <linux/string.h>
 
 #include "../include/matryoshka.h"
+#include "../include/matryoshka_vfat.h"
 
 
 /*
