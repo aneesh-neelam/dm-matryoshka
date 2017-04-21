@@ -11,13 +11,13 @@
 /*
  * Helper functions for dm-matryoshka
  */
-static int get_entropy_blocks(struct dm_dev *entropy) {
+int get_entropy_blocks(struct dm_dev *entropy) {
   // TODO
 
   return 0;
 }
 
-static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
   int freelist_status;
 
@@ -31,7 +31,7 @@ static int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   return 0;
 }
 
-static int matryoshka_write(struct dm_target *ti, struct bio *bio) {
+int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
   int freelist_status;
 
