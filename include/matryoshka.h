@@ -1,3 +1,5 @@
+#include <linux/device-mapper.h>
+
 #define DM_MSG_PREFIX "matryoshka"
 #define NAME "matryoshka"
 #define LICENSE "Dual BSD/GPL"
@@ -19,6 +21,6 @@ struct matryoshka_c {
   struct dm_dev *carrier;
 };
 
-static int get_entropy_blocks(struct dm_dev*);
-static int matryoshka_read(struct dm_target*, struct bio*);
-static int matryoshka_write(struct dm_target*, struct bio*);
+int get_entropy_blocks(struct dm_dev*);
+int matryoshka_read(struct dm_target*, struct bio*);
+int matryoshka_write(struct dm_target*, struct bio*);
