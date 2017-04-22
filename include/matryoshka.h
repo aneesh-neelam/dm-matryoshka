@@ -15,7 +15,7 @@
  * Matryoshka: Maps in the Matryoshka way.
  */
 struct matryoshka_c {
-  u8 int carrier_fs;
+  u8 carrier_fs;
   char *passphrase;
   struct dm_dev *entropy;
   struct dm_dev *carrier;
