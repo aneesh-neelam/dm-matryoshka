@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/string.h>
+#include <linux/types.h>
 
 #include "../include/matryoshka.h"
 #include "../include/matryoshka_vfat.h"
@@ -11,6 +12,24 @@
 /*
  * Helper functions for dm-matryoshka
  */
+u8 get_carrier_fs(char *fs) {
+  if (strncmp("vfat", fs, 4) == 0) {
+    return FS_VFAT;
+  } else if (strncmp("exfat", fs, 5) == 0) {
+    return FS_EXFAT;
+  } else if (strncmp("ext4", fs, 4) == 0) {
+    return FS_EXT4;
+  } else if (strncmp("btrfs", fs, 5) == 0) {
+    return FS_BTRFS;
+  } else if (strncmp("ntfs", fs, 4) == 0) {
+    return FS_NTFS;
+  } else if (strncmp("zfs", fs, 3) == 0) {
+    return FS_ZFS;
+  } else {
+    return FS_UNKNOWN;
+  }
+}
+
 int get_entropy_blocks(struct dm_dev *entropy) {
   // TODO
 
@@ -24,7 +43,12 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
-  freelist_status = vfat_get_free_blocks(mc -> carrier);
+
+  if (mc -> carrier_fs == FS_VFAT) {
+    freelist_status = vfat_get_free_blocks(mc -> carrier);
+  } else {
+    return -EIO;
+  }
 
   // TODO
 
@@ -38,7 +62,12 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
-  freelist_status = vfat_get_free_blocks(mc -> carrier);
+
+  if (mc -> carrier_fs == FS_VFAT) {
+    freelist_status = vfat_get_free_blocks(mc -> carrier);
+  } else {
+    return -EIO;
+  }
 
   // TODO
 
@@ -49,20 +78,18 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
-  // TODO regular filesystem type, assumed to be vfat for now
-
   struct matryoshka_c *mc;
   int ret1, ret2;
   int passphrase_length;
 
-  if (argc != 2) {
-    ti -> error = "Invalid number of arguments for dm-matryoshka constructor";
+  if (argc != 4) {
+    ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
     return -EINVAL;
   }
 
   mc = kmalloc(sizeof(*mc), GFP_KERNEL);
   if (mc == NULL) {
-    ti -> error = "Cannot allocate dm-matryoshka context";
+    ti -> error = "dm:matryoshka: Cannot allocate context";
     return -ENOMEM;
   }
 
@@ -76,9 +103,11 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> entropy);
   ret2 = dm_get_device(ti, argv[2], dm_table_get_mode(ti -> table), &mc -> carrier);
   if (ret1 || ret2) {
-    ti -> error = "Device lookup failed";
+    ti -> error = "dm:matryoshka: Device lookup failed";
     goto bad;
   }
+
+  ti -> carrier_fs = get_carrier_fs(argv[3]);
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
