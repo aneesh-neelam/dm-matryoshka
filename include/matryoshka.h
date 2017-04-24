@@ -31,5 +31,7 @@ struct matryoshka_c {
 
 u8 get_carrier_fs(char*);
 int get_entropy_blocks(struct dm_dev*);
+int gferasure_encode(struct bio_vec*, struct bio_vec*, struct bio_vec*);
+int gferasure_deconstruct(struct bio_vec*, struct bio_vec*, struct bio_vec*);
 int matryoshka_read(struct dm_target*, struct bio*);
 int matryoshka_write(struct dm_target*, struct bio*);
