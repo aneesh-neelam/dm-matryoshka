@@ -36,13 +36,13 @@ int get_entropy_blocks(struct dm_dev *entropy) {
   return 0;
 }
 
-int gferasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
+int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
   // TODO link with gferasure? userspace library?
 
   return 0;
 }
 
-int gferasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
+int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
   // TODO link with gferasure? userspace library?
 
   return 0;
