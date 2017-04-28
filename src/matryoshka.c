@@ -48,6 +48,20 @@ int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struc
   return 0;
 }
 
+xor_data (const char *output, const char *input1, const char *input2, u64 length) {
+  u64 i;
+
+  if (output == NULL || input1 == NULL || input2 == NULL) {
+    return -EIO;
+  }
+
+  for (i = 0; i < length; ++i) {
+        output[i] = input1[i] ^ input2[i];
+  }
+
+  return 0;
+}
+
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
   int freelist_status;
