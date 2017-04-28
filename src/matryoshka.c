@@ -48,7 +48,7 @@ int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struc
   return 0;
 }
 
-xor_data (char *output, const char *input1, const char *input2, u64 length) {
+int xor_data(char *output, const char *input1, const char *input2, u64 length) {
   u64 i;
 
   if (output == NULL || input1 == NULL || input2 == NULL) {
