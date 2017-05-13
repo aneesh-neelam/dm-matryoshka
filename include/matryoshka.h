@@ -31,8 +31,10 @@ struct matryoshka_c {
 
 u8 get_carrier_fs(char*);
 int get_entropy_blocks(struct dm_dev*);
+/*
 int erasure_encode(struct bio_vec*, struct bio_vec*, struct bio_vec*);
 int erasure_deconstruct(struct bio_vec*, struct bio_vec*, struct bio_vec*);
+*/
 int xor_data(char*, const char*, const char*, u64 length);
 int matryoshka_read(struct dm_target*, struct bio*);
 int matryoshka_write(struct dm_target*, struct bio*);

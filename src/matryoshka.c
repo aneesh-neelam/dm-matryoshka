@@ -36,6 +36,7 @@ int get_entropy_blocks(struct dm_dev *entropy) {
   return 0;
 }
 
+/*
 int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
   // TODO link with gferasure? userspace library?
 
@@ -47,6 +48,7 @@ int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struc
 
   return 0;
 }
+*/
 
 int xor_data(char *output, const char *input1, const char *input2, u64 length) {
   u64 i;
