@@ -16,10 +16,10 @@ module = dm-matryoshka
 
 # Kernel module build config
 obj-m += $(module).o
-dm-matryoshka-objs := ./src/$(module).o
+dm-matryoshka-objs := ./src/matryoshka.o ./src/matryoshka_vfat.o
 
 all:
-	make -C $(KDIR) M=$(PWD) modules
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 sign:
 	$(KDIR)/scripts/sign-file sha256 $(PRIVATEKEYFILE) $(PUBLICKEYFILE) $(module).ko
@@ -35,4 +35,4 @@ unload:
 	modprobe -r $(module)
 
 clean:
-	make -C $(KDIR) M=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
