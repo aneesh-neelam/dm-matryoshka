@@ -84,7 +84,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sectorr
   }
 
-  return 0;
+  return DM_MAPIO_REMAPPED;
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
@@ -107,7 +107,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sector
   }
 
-  return 0;
+  return DM_MAPIO_REMAPPED;
 }
 
 /*
@@ -149,6 +149,11 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
   ti -> private = mc;
+
+  printk(KERN_DEBUG "dm-matryoshka Passphrase: %s: ", mc -> passphrase);
+  printk(KERN_DEBUG "dm-matryoshka Carrier Device: %s: ", argv[1]);
+  printk(KERN_DEBUG "dm-matryoshka Entropy Device: %s: ", argv[2]);
+  printk(KERN_DEBUG "dm-matryoshka Carrier Filesystem type: %x: ", mc -> carrier_fs);
 
   return 0;
 
