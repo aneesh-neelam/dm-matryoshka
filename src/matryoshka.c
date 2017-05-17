@@ -74,11 +74,15 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
+    // TODO Find free sector
   } else {
     return -EIO;
   }
-
-  // TODO
+ 
+  bio -> bi_bdev = mc -> carrier -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sectorr
+  }
 
   return 0;
 }
@@ -93,11 +97,15 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
+    // TODO Find free sector
   } else {
     return -EIO;
   }
 
-  // TODO
+  bio -> bi_bdev = mc -> carrier -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sector
+  }
 
   return 0;
 }
@@ -122,7 +130,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   passphrase_length = strlen(argv[0]);
-  mc -> passphrase = kmalloc(passphrase_length, GFP_KERNEL);
+  mc -> passphrase = kmalloc(passphrase_length + 1, GFP_KERNEL);
   strncpy(mc -> passphrase, argv[0], passphrase_length);
   mc -> passphrase[passphrase_length] = '\0';
 
