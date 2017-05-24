@@ -117,7 +117,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   unsigned long long tmp;
   char dummy;
 
-  if (argc != 4) {
+  if (argc != 5) {
     ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
     return -EINVAL;
   }
@@ -144,7 +144,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   mc -> carrier_fs = get_carrier_fs(argv[3]);
 
-  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
+  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid device sector";
     goto bad;
   }
