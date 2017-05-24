@@ -31,24 +31,24 @@ u8 get_carrier_fs(char *fs) {
 }
 
 int get_entropy_blocks(struct dm_dev *entropy) {
-  // TODO
+  // TODO in the context of bio, this function may not be necessary
 
   return 0;
 }
 
-/*
+
 int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
-  // TODO link with gferasure? userspace library?
+  // TODO link with a C erasure library
 
   return 0;
 }
 
 int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
-  // TODO link with gferasure? userspace library?
+  // TODO link with a C erasure library
 
   return 0;
 }
-*/
+
 
 int xor_data(char *output, const char *input1, const char *input2, u64 length) {
   u64 i;
@@ -71,18 +71,16 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
+  // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
-    // TODO Find free sector
+    // TODO Find free sector from underlying file system
   } else {
     return -EIO;
   }
- 
-  bio -> bi_bdev = mc -> carrier -> bdev;
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sectorr
-  }
+
+  // TODO erasure code entropy block and carrier block, modify bio and submit
 
   return DM_MAPIO_REMAPPED;
 }
@@ -94,18 +92,16 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
+  // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
-    // TODO Find free sector
+    // TODO Find free sector from underlying file system
   } else {
     return -EIO;
   }
 
-  bio -> bi_bdev = mc -> carrier -> bdev;
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add free sector
-  }
+  // TODO erasure code entropy block and carrier block, modify bio and submit
 
   return DM_MAPIO_REMAPPED;
 }
@@ -115,8 +111,11 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
   struct matryoshka_c *mc;
+
   int ret1, ret2;
   int passphrase_length;
+  unsigned long long tmp;
+  char dummy;
 
   if (argc != 4) {
     ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
@@ -145,6 +144,12 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   mc -> carrier_fs = get_carrier_fs(argv[3]);
 
+  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid device sector";
+    goto bad;
+  }
+  mc->start = tmp;
+
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
@@ -153,7 +158,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   printk(KERN_DEBUG "dm-matryoshka Passphrase: %s: ", mc -> passphrase);
   printk(KERN_DEBUG "dm-matryoshka Carrier Device: %s: ", argv[1]);
   printk(KERN_DEBUG "dm-matryoshka Entropy Device: %s: ", argv[2]);
-  printk(KERN_DEBUG "dm-matryoshka Carrier Filesystem type: %x: ", mc -> carrier_fs);
+  printk(KERN_DEBUG "dm-matryoshka Carrier Filesystem Type: %x: ", mc -> carrier_fs);
 
   return 0;
 
@@ -172,6 +177,15 @@ static void matryoshka_dtr(struct dm_target *ti) {
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   int status;
+
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
+  bio -> bi_bdev = mc -> carrier -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = mc -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+  }
+  status = DM_MAPIO_REMAPPED;
+
   switch (bio_op(bio)) {
 
     case REQ_OP_READ:
@@ -185,31 +199,11 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
       break;
 
     default:
-      status = -EIO;
+      printk(KERN_DEBUG "dm-matryoshka bio_op: other");
+      break;
   }
 
-  if (status != 0) {
-    return status;
-  }
-
-  bio_endio(bio);
-  return DM_MAPIO_SUBMITTED;
-}
-
-static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
-
-}
-
-static int matryoshka_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data) {
-  return 0;
-}
-
-static int matryoshka_prepare_ioctl(struct dm_target *ti, struct block_device **bdev, fmode_t *mode) {
-	return 0;
-}
-
-static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void **kaddr, pfn_t *pfn, long size) {
-  return 0;
+  return status;
 }
 
 static struct target_type matryoshka_target = {
@@ -219,10 +213,6 @@ static struct target_type matryoshka_target = {
   .ctr    = matryoshka_ctr,
   .dtr    = matryoshka_dtr,
   .map    = matryoshka_map,
-  .status = matryoshka_status,
-  .iterate_devices = matryoshka_iterate_devices,
-  .prepare_ioctl = matryoshka_prepare_ioctl,
-  .direct_access = matryoshka_direct_access,
 };
 
 static int __init dm_matryoshka_init(void) {
