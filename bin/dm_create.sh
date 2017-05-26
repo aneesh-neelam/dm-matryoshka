@@ -1,6 +1,4 @@
 #!/bin/sh
 
-SCRIPT=$(readlink -f "$0")
-SCRIPTPATH=$(dirname "$SCRIPT")
-
+SCRIPTPATH=$(dirname $0)
 cat $(SCRIPTPATH)/dm_create.conf | dmsetup create mydev
