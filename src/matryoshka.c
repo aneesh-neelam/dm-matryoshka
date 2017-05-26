@@ -135,8 +135,8 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   ret1 = ret2 = -EINVAL;
 
-  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> entropy);
-  ret2 = dm_get_device(ti, argv[2], dm_table_get_mode(ti -> table), &mc -> carrier);
+  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> carrier);
+  ret2 = dm_get_device(ti, argv[2], dm_table_get_mode(ti -> table), &mc -> entropy);
   if (ret1 || ret2) {
     ti -> error = "dm:matryoshka: Device lookup failed";
     goto bad;
