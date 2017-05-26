@@ -1,3 +1,3 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 mkfs.vfat /dev/mapper/mydev
