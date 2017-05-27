@@ -136,19 +136,25 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   ret1 = ret2 = -EINVAL;
 
   ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> carrier);
-  ret2 = dm_get_device(ti, argv[2], dm_table_get_mode(ti -> table), &mc -> entropy);
+  ret2 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &mc -> entropy);
   if (ret1 || ret2) {
     ti -> error = "dm:matryoshka: Device lookup failed";
     goto bad;
   }
 
-  mc -> carrier_fs = get_carrier_fs(argv[3]);
+  mc -> carrier_fs = get_carrier_fs(argv[5]);
 
-  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
-    ti->error = "dm-matryoshka: Invalid device sector";
+  if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid carrier device sector";
     goto bad;
   }
-  mc->start = tmp;
+  mc -> carrier_start = tmp;
+
+  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid entropy device sector";
+    goto bad;
+  }
+  mc -> entropy_start = tmp;
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;

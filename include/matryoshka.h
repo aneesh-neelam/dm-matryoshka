@@ -19,7 +19,8 @@ struct matryoshka_c {
   struct dm_dev *entropy;
   struct dm_dev *carrier;
   u8 carrier_fs;
-  sector_t start;
+  sector_t carrier_start;
+  sector_t entropy_start;
 };
 
 #define FS_VFAT 0x01
