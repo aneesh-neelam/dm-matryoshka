@@ -188,7 +188,7 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
 
   bio -> bi_bdev = mc -> carrier -> bdev;
   if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = mc -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+    bio->bi_iter.bi_sector = mc -> carrier_start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
   status = DM_MAPIO_REMAPPED;
 
