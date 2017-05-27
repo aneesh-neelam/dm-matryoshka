@@ -163,9 +163,9 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", mc -> passphrase);
   printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
-  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %llu: ", mc -> carrier_start);
+  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", mc -> carrier_start);
   printk(KERN_DEBUG "dm-matryoshka entropy device: %s: ", argv[3]);
-  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %llu: ", mc -> entropy_start);
+  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %lu: ", mc -> entropy_start);
   printk(KERN_DEBUG "dm-matryoshka carrier filesystem type: %x: ", mc -> carrier_fs);
 
   return 0;
