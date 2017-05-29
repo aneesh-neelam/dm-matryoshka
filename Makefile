@@ -14,9 +14,16 @@ PUBLICKEYFILE = /home/aneeshneelam/.uefi-sb/sb_pub.der
 # Module name
 module = dm-matryoshka
 
+# SRC and LIB files
+SRCOBJS = ./src/matryoshka.o ./src/matryoshka_vfat.o
+LIBOBJS = ./lib/jerasure/cauchy.o ./lib/jerasure/galois.o ./lib/jerasure/jerasure.o ./lib/jerasure/liberation.o ./lib/jerasure/reed_sol.o
+
+# KBUILD Flags
+KBUILD_CFLAGS += -Wno-unused-parameter
+
 # Kernel module build config
 obj-m += $(module).o
-dm-matryoshka-objs := ./src/matryoshka.o ./src/matryoshka_vfat.o
+dm-matryoshka-objs := $(SRCOBJS) $(LIBOBJS)
 
 all:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
