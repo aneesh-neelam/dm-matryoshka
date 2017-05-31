@@ -6,64 +6,13 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-#include "../include/matryoshka.h"
-#include "../include/matryoshka_vfat.h"
+#include "../include/carrier.h"
+#include "../include/entropy.h"
+#include "../include/erasure.h"
+#include "../include/fs.h"
+#include "../include/target.h"
+#include "../include/xor.h"
 
-
-/*
- * Helper functions for dm-matryoshka
- */
-u8 get_carrier_fs(char *fs) {
-  if (strncmp("vfat", fs, 4) == 0) {
-    return FS_VFAT;
-  } else if (strncmp("exfat", fs, 5) == 0) {
-    return FS_EXFAT;
-  } else if (strncmp("ext4", fs, 4) == 0) {
-    return FS_EXT4;
-  } else if (strncmp("btrfs", fs, 5) == 0) {
-    return FS_BTRFS;
-  } else if (strncmp("ntfs", fs, 4) == 0) {
-    return FS_NTFS;
-  } else if (strncmp("zfs", fs, 3) == 0) {
-    return FS_ZFS;
-  } else {
-    return FS_UNKNOWN;
-  }
-}
-
-int get_entropy_blocks(struct dm_dev *entropy) {
-  // TODO in the context of bio, this function may not be necessary
-
-  return 0;
-}
-
-
-int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
-  // TODO link with a C erasure library
-
-  return 0;
-}
-
-int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
-  // TODO link with a C erasure library
-
-  return 0;
-}
-
-
-int xor_data(char *output, const char *input1, const char *input2, u64 length) {
-  u64 i;
-
-  if (output == NULL || input1 == NULL || input2 == NULL) {
-    return -EIO;
-  }
-
-  for (i = 0; i < length; ++i) {
-        output[i] = input1[i] ^ input2[i];
-  }
-
-  return 0;
-}
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
