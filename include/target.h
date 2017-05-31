@@ -22,6 +22,9 @@ struct matryoshka_c {
   u8 carrier_fs;
   sector_t carrier_start;
   sector_t entropy_start;
+
+  struct workqueue_struct *matryoshka_wq;
+  struct work_struct matryoshka_work;
 };
 
 
