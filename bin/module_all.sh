@@ -3,6 +3,7 @@
 SCRIPTPATH=$(dirname "$0")
 cd "$SCRIPTPATH"/..
 
+make clean
 make
 make sign
 sudo make unload
