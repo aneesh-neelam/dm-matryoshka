@@ -2,67 +2,17 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
-#include "../include/matryoshka.h"
-#include "../include/matryoshka_vfat.h"
+#include "../include/carrier.h"
+#include "../include/entropy.h"
+#include "../include/erasure.h"
+#include "../include/fs.h"
+#include "../include/target.h"
+#include "../include/xor.h"
 
-
-/*
- * Helper functions for dm-matryoshka
- */
-u8 get_carrier_fs(char *fs) {
-  if (strncmp("vfat", fs, 4) == 0) {
-    return FS_VFAT;
-  } else if (strncmp("exfat", fs, 5) == 0) {
-    return FS_EXFAT;
-  } else if (strncmp("ext4", fs, 4) == 0) {
-    return FS_EXT4;
-  } else if (strncmp("btrfs", fs, 5) == 0) {
-    return FS_BTRFS;
-  } else if (strncmp("ntfs", fs, 4) == 0) {
-    return FS_NTFS;
-  } else if (strncmp("zfs", fs, 3) == 0) {
-    return FS_ZFS;
-  } else {
-    return FS_UNKNOWN;
-  }
-}
-
-int get_entropy_blocks(struct dm_dev *entropy) {
-  // TODO
-
-  return 0;
-}
-
-/*
-int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
-  // TODO link with gferasure? userspace library?
-
-  return 0;
-}
-
-int erasure_reconstruct(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
-  // TODO link with gferasure? userspace library?
-
-  return 0;
-}
-*/
-
-int xor_data(char *output, const char *input1, const char *input2, u64 length) {
-  u64 i;
-
-  if (output == NULL || input1 == NULL || input2 == NULL) {
-    return -EIO;
-  }
-
-  for (i = 0; i < length; ++i) {
-        output[i] = input1[i] ^ input2[i];
-  }
-
-  return 0;
-}
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   int entropy_status;
@@ -71,16 +21,18 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
+  // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
+    // TODO Find free sector from underlying file system
   } else {
     return -EIO;
   }
 
-  // TODO
+  // TODO erasure code entropy block and carrier block, modify bio and submit
 
-  return 0;
+  return DM_MAPIO_REMAPPED;
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
@@ -90,16 +42,18 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
+  // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
     freelist_status = vfat_get_free_blocks(mc -> carrier);
+    // TODO Find free sector from underlying file system
   } else {
     return -EIO;
   }
 
-  // TODO
+  // TODO erasure code entropy block and carrier block, modify bio and submit
 
-  return 0;
+  return DM_MAPIO_REMAPPED;
 }
 
 /*
@@ -107,10 +61,13 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
   struct matryoshka_c *mc;
+
   int ret1, ret2;
   int passphrase_length;
+  unsigned long long tmp;
+  char dummy;
 
-  if (argc != 4) {
+  if (argc != 6) {
     ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
     return -EINVAL;
   }
@@ -122,25 +79,44 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   passphrase_length = strlen(argv[0]);
-  mc -> passphrase = kmalloc(passphrase_length, GFP_KERNEL);
+  mc -> passphrase = kmalloc(passphrase_length + 1, GFP_KERNEL);
   strncpy(mc -> passphrase, argv[0], passphrase_length);
   mc -> passphrase[passphrase_length] = '\0';
 
   ret1 = ret2 = -EINVAL;
 
-  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> entropy);
-  ret2 = dm_get_device(ti, argv[2], dm_table_get_mode(ti -> table), &mc -> carrier);
+  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> carrier);
+  ret2 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &mc -> entropy);
   if (ret1 || ret2) {
     ti -> error = "dm:matryoshka: Device lookup failed";
     goto bad;
   }
 
-  mc -> carrier_fs = get_carrier_fs(argv[3]);
+  mc -> carrier_fs = get_carrier_fs(argv[5]);
+
+  if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid carrier device sector";
+    goto bad;
+  }
+  mc -> carrier_start = tmp;
+
+  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid entropy device sector";
+    goto bad;
+  }
+  mc -> entropy_start = tmp;
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
   ti -> private = mc;
+
+  printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", mc -> passphrase);
+  printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
+  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", mc -> carrier_start);
+  printk(KERN_DEBUG "dm-matryoshka entropy device: %s: ", argv[3]);
+  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %lu: ", mc -> entropy_start);
+  printk(KERN_DEBUG "dm-matryoshka carrier filesystem type: %x: ", mc -> carrier_fs);
 
   return 0;
 
@@ -159,6 +135,15 @@ static void matryoshka_dtr(struct dm_target *ti) {
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   int status;
+
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
+  bio -> bi_bdev = mc -> carrier -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = mc -> carrier_start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+  }
+  status = DM_MAPIO_REMAPPED;
+
   switch (bio_op(bio)) {
 
     case REQ_OP_READ:
@@ -172,31 +157,11 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
       break;
 
     default:
-      status = -EIO;
+      printk(KERN_DEBUG "dm-matryoshka bio_op: other");
+      break;
   }
 
-  if (status != 0) {
-    return status;
-  }
-
-  bio_endio(bio);
-  return DM_MAPIO_SUBMITTED;
-}
-
-static void matryoshka_status(struct dm_target *ti, status_type_t type, unsigned status_flags, char *result, unsigned maxlen) {
-
-}
-
-static int matryoshka_iterate_devices(struct dm_target *ti, iterate_devices_callout_fn fn, void *data) {
-  return 0;
-}
-
-static int matryoshka_prepare_ioctl(struct dm_target *ti, struct block_device **bdev, fmode_t *mode) {
-	return 0;
-}
-
-static long matryoshka_direct_access(struct dm_target *ti, sector_t sector, void **kaddr, pfn_t *pfn, long size) {
-  return 0;
+  return status;
 }
 
 static struct target_type matryoshka_target = {
@@ -206,10 +171,6 @@ static struct target_type matryoshka_target = {
   .ctr    = matryoshka_ctr,
   .dtr    = matryoshka_dtr,
   .map    = matryoshka_map,
-  .status = matryoshka_status,
-  .iterate_devices = matryoshka_iterate_devices,
-  .prepare_ioctl = matryoshka_prepare_ioctl,
-  .direct_access = matryoshka_direct_access,
 };
 
 static int __init dm_matryoshka_init(void) {

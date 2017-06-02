@@ -49,3 +49,8 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# IDEA
+.idea/
+CMakeLists.txt
+cmake-build-debug/
