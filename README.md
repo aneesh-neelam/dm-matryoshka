@@ -39,9 +39,9 @@ Please change the file paths for the public and private X.509 key files in the M
 
 ### Usage:
 
-Using `dmsetup`:
+Take a look at the bash scripts in the [bin](bin) directory to get an idea of how to use this device mapper.
 
-    # dmsetup ...
+Essentially, using `dmsetup`.
 
 ## Contributing and License
 
