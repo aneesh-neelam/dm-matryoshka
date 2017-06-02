@@ -1,12 +1,11 @@
 #include "../include/workqueue.h"
-#include "../include/erasure.h"
-#include "../include/xor.h"
 
 
-void workqueue_do_erasure(void) {
+void workqueue_do_write(void) {
   // TODO Need to tailor code for kernel module
 }
 
-void workqueue_do_xor(void) {
+
+void workqueue_end_write(void) {
   // TODO Need to tailor code for kernel module
 }
