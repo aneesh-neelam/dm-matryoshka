@@ -15,6 +15,8 @@
 
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+  int status;
+  /*
   int entropy_status;
   int freelist_status;
 
@@ -32,10 +34,18 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
-  return DM_MAPIO_REMAPPED;
+  */
+  status = submit_bio_wait(bio)
+  if (status != 0) {
+    return -EIO;
+  }
+  return DM_MAPIO_SUBMITTED;
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
+  int status;
+
+  /*
   int entropy_status;
   int freelist_status;
 
@@ -53,7 +63,12 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
 
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
-  return DM_MAPIO_REMAPPED;
+  */
+  status = submit_bio_wait(bio)
+  if (status != 0) {
+    return -EIO;
+  }
+  return DM_MAPIO_SUBMITTED;
 }
 
 /*
