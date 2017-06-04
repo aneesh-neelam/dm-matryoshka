@@ -17,7 +17,7 @@ void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, struct b
     spin_unlock_irqrestore(&context->lock, flags);
 
     if (should_wake)
-        kmatryoshkad(context);
+        wakeup_kmatryoshkad(context);
 }
 
 struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
