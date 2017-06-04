@@ -24,7 +24,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
-    freelist_status = vfat_get_free_blocks(mc -> carrier);
+    //freelist_status = vfat_get_free_blocks(mc -> carrier);
     // TODO Find free sector from underlying file system
   } else {
     return -EIO;
@@ -45,7 +45,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   // TODO corresponding entropy block in callback
 
   if (mc -> carrier_fs == FS_VFAT) {
-    freelist_status = vfat_get_free_blocks(mc -> carrier);
+    //freelist_status = vfat_get_free_blocks(mc -> carrier);
     // TODO Find free sector from underlying file system
   } else {
     return -EIO;
@@ -105,6 +105,8 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     goto bad;
   }
   mc -> entropy_start = tmp;
+
+  vfat_get_header(mc -> carrier, mc->carrier_start);
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
