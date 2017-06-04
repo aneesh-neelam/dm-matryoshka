@@ -21,7 +21,7 @@ struct matryoshka_device {
   struct matryoshka_c *mc;
   struct dm_dev *dev;
 	sector_t start;
-}
+};
 
 struct matryoshka_context {
   spinlock_t lock;
