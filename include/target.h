@@ -29,6 +29,10 @@ struct matryoshka_c {
   struct work_struct matryoshka_work;
 
   struct fs_vfat *fs;
+
+  unsigned int num_carrier; // m
+  unsigned int num_entropy; // k
+  unsigned int num_userdata; // d
 };
 
 

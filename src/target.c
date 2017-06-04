@@ -15,12 +15,13 @@
 
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
   int status;
   /*
   int entropy_status;
   int freelist_status;
 
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   entropy_status = get_entropy_blocks(mc -> entropy);
   // TODO corresponding entropy block in callback
@@ -35,6 +36,9 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
   */
+  // clone_bio
+
+
   status = submit_bio(bio);
   if (status != 0) {
     return -EIO;
@@ -43,13 +47,15 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
+  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
   int status;
 
   /*
   int entropy_status;
   int freelist_status;
 
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+
 
   entropy_status = get_entropy_blocks(mc -> entropy);
   // TODO corresponding entropy block in callback
@@ -125,6 +131,10 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   vfat_get_header(vfat, mc -> carrier, mc->carrier_start);
   mc -> fs = vfat;
+
+  mc -> num_carrier = 1;
+  mc -> num_entropy = 1;
+  mc -> num_userdata = 1;
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
