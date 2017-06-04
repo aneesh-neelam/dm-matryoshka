@@ -34,7 +34,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     if (bio_sectors(bio)) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
-    status = submit_bio_wait(entropy_bios[i]);
+    // status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
       return -EIO;
     }
@@ -67,7 +67,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     if (bio_sectors(bio)) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
-    status = submit_bio_wait(entropy_bios[i]);
+    // status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
       return -EIO;
     }
