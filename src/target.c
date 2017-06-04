@@ -52,8 +52,8 @@ mybio_clone_cleanup:
     return NULL;
 }
 
-void end_read(struct bio *bio, int error) {
-  printk(KERN_DEBUG "Read: Read entropy at sector %llu with error: %d", bio -> bi_iter.bi_sector, error);
+static void end_read(struct bio *bio) {
+  printk(KERN_DEBUG "Read: Read entropy at sector %llu with error: %d", bio -> bi_iter.bi_sector, bio -> bi_error);
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
@@ -76,7 +76,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     if (bio_sectors(bio)) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
-    entropy_bios[i] -> bi_end_io = (bio_end_io_t) end_read;
+    entropy_bios[i] -> bi_end_io = end_read;
     generic_make_request(entropy_bios[i]);
   }
 
