@@ -34,11 +34,12 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     if (bio_sectors(bio)) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
-    // status = submit_bio_wait(entropy_bios[i]);
+    status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
-      return -EIO;
+      printk(KERN_DEBUG "Write: Read entropy at sector %llu failed", entropy_bios[i] -> bi_iter.bi_sector);
+    } else {
+      printk(KERN_DEBUG "Write: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
     }
-    printk(KERN_DEBUG "Read: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
   for (i = 0; i < mc -> num_carrier; ++i) {
@@ -69,9 +70,10 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     }
     status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
-      // return -EIO;
+      printk(KERN_DEBUG "Write: Read entropy at sector %llu failed", entropy_bios[i] -> bi_iter.bi_sector);
+    } else {
+      printk(KERN_DEBUG "Write: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
     }
-    printk(KERN_DEBUG "Write: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
   for (i = 0; i < mc -> num_carrier; ++i) {
