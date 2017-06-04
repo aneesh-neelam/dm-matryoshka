@@ -1,6 +1,8 @@
 #include <linux/types.h>
 #include <linux/device-mapper.h>
 
+#include "fs.h"
+
 #define DM_MSG_PREFIX "matryoshka"
 #define NAME "matryoshka"
 #define LICENSE "Dual BSD/GPL"
@@ -25,6 +27,8 @@ struct matryoshka_c {
 
   struct workqueue_struct *matryoshka_wq;
   struct work_struct matryoshka_work;
+
+  struct fs_vfat *fs;
 };
 
 

@@ -1,5 +1,10 @@
 #include <linux/device-mapper.h>
 
+#ifndef FS_H
+#define FS_H
+
+// Last cluster
+#define FAT_LAST (-1)
 
 // Header offsets
 #define FAT_BYTES_PER_SECTOR        0x0b
@@ -45,5 +50,40 @@
         buffer[x+2] = ((l)>>16)&0xff; \
 buffer[x+3] = ((l)>>24)&0xff;
 
-int vfat_get_header(struct dm_dev*, sector_t);
-int vfat_is_cluster_free(unsigned int);
+
+struct fs_vfat {
+  struct dm_dev *dev;
+  // Header values
+  int type;
+  unsigned long long totalSectors;
+  unsigned long long bytesPerSector;
+  unsigned long long sectorsPerCluster;
+  unsigned long long reservedSectors;
+  unsigned long long fats;
+  unsigned long long sectorsPerFat;
+  unsigned long long rootDirectory;
+  unsigned long long reserved;
+  unsigned long long strange;
+  unsigned int bits;
+
+  // Specific to FAT16
+  unsigned long long rootEntries;
+  unsigned long long rootClusters;
+
+  // Computed values
+  unsigned long long fatStart;
+  unsigned long long dataStart;
+  unsigned long long bytesPerCluster;
+  unsigned long long totalSize;
+  unsigned long long dataSize;
+  unsigned long long fatSize;
+  unsigned long long totalClusters;
+};
+
+
+int vfat_get_header(struct fs_vfat*, struct dm_dev*, sector_t);
+int vfat_parse_header(struct fs_vfat*, char*, int);
+int vfat_compute_values(struct fs_vfat*);
+int vfat_is_cluster_used(struct fs_vfat *,unsigned int);
+
+#endif /* FS_H */

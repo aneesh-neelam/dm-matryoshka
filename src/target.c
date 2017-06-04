@@ -61,6 +61,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
   struct matryoshka_c *mc;
+  struct fs_vfat *vfat;
 
   int ret1, ret2;
   int passphrase_length;
@@ -93,6 +94,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   mc -> carrier_fs = get_carrier_fs(argv[5]);
+  vfat = kmalloc(sizeof(struct fs_vfat), GFP_KERNEL);
 
   if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid carrier device sector";
@@ -106,7 +108,8 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
   mc -> entropy_start = tmp;
 
-  vfat_get_header(mc -> carrier, mc->carrier_start);
+  vfat_get_header(vfat, mc -> carrier, mc->carrier_start);
+  mc -> fs = vfat;
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
