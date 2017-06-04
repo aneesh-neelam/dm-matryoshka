@@ -55,14 +55,9 @@ mybio_clone_cleanup:
   Deallocates a bio structure and all of the pages associated to its bio_vec's.
   \param[in] bio the bio to free.
 */
-static void mybio_free(struct bio *bio)
-{
-    unsigned short i;
-    struct bio_vec *bvec = bio->bi_io_vec;
-    for (i = 0; i < bio->bi_max_vecs; i++, bvec++)
-        __free_page(bvec->bv_page);
-
-    bio_free(bio);
+void mybio_free(struct bio *bio) {
+    bio_free_pages(bio);
+    kfree(bio);
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
