@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/bio.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
@@ -57,7 +58,7 @@ mybio_clone_cleanup:
 */
 void mybio_free(struct bio *bio) {
     bio_free_pages(bio);
-    kfree(bio);
+    bio_free(bio);
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
