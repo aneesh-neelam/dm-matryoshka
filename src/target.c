@@ -119,7 +119,9 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
 static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) {
-  struct matryoshka_c *mc;
+  struct matryoshka_context *context;
+  struct matryoshka_device *carrier;
+  struct matryoshka_device *entropy;
   struct fs_vfat *vfat;
 
   int ret1, ret2;
@@ -132,73 +134,90 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     return -EINVAL;
   }
 
-  mc = kmalloc(sizeof(*mc), GFP_KERNEL);
-  if (mc == NULL) {
-    ti -> error = "dm:matryoshka: Cannot allocate context";
+  context = kmalloc(sizeof(*context), GFP_KERNEL);
+  carrier = kmalloc(sizeof(*carrier), GFP_KERNEL);
+  entropy = kmalloc(sizeof(*entropy), GFP_KERNEL);
+  vfat = kmalloc(sizeof(*vfat), GFP_KERNEL);
+  if (context == NULL || carrier == NULL || entropy == NULL || vfat == NULL) {
+    ti -> error = "dm:matryoshka: Cannot allocate memory for context or device or vfat header";
     return -ENOMEM;
   }
 
   passphrase_length = strlen(argv[0]);
-  mc -> passphrase = kmalloc(passphrase_length + 1, GFP_KERNEL);
-  strncpy(mc -> passphrase, argv[0], passphrase_length);
-  mc -> passphrase[passphrase_length] = '\0';
+  context -> passphrase = kmalloc(passphrase_length + 1, GFP_KERNEL);
+  if (context -> passphrase == NULL) {
+    ti -> error = "dm:matryoshka: Cannot allocate memory for passphrase";
+    return -ENOMEM;
+  }
+  strncpy(context -> passphrase, argv[0], passphrase_length);
+  context -> passphrase[passphrase_length] = '\0';
 
   ret1 = ret2 = -EINVAL;
-
-  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &mc -> carrier);
-  ret2 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &mc -> entropy);
-  if (ret1 || ret2) {
-    ti -> error = "dm:matryoshka: Device lookup failed";
+  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &carrier -> dev);
+  ret2 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &entropy -> dev);
+  if (ret1) {
+    ti -> error = "dm:matryoshka: Carrier device lookup failed";
+    goto bad;
+  }
+  if (ret2) {
+    ti -> error = "dm:matryoshka: Entropy device lookup failed";
     goto bad;
   }
 
-  mc -> carrier_fs = get_carrier_fs(argv[5]);
-  vfat = kmalloc(sizeof(struct fs_vfat), GFP_KERNEL);
+  context -> carrier_fs = get_carrier_fs(argv[5]);
 
   if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid carrier device sector";
     goto bad;
   }
-  mc -> carrier_start = tmp;
+  context -> carrier_start = tmp;
 
   if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid entropy device sector";
     goto bad;
   }
-  mc -> entropy_start = tmp;
+  context -> entropy_start = tmp;
 
-  vfat_get_header(vfat, mc -> carrier, mc->carrier_start);
-  mc -> fs = vfat;
+  vfat_get_header(vfat, carrier -> dev, carrier -> start);
+  context -> fs = vfat;
 
-  mc -> num_carrier = 1;
-  mc -> num_entropy = 1;
-  mc -> num_userdata = 1;
+  context -> num_carrier = 1;
+  context -> num_entropy = 1;
+  context -> num_userdata = 1;
 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
-  ti -> private = mc;
+  ti -> private = context;
 
-  printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", mc -> passphrase);
+  printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", context -> passphrase);
   printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
-  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", mc -> carrier_start);
+  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", context -> carrier -> start);
   printk(KERN_DEBUG "dm-matryoshka entropy device: %s: ", argv[3]);
-  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %lu: ", mc -> entropy_start);
-  printk(KERN_DEBUG "dm-matryoshka carrier filesystem type: %x: ", mc -> carrier_fs);
+  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %lu: ", context -> entropy -> start);
+  printk(KERN_DEBUG "dm-matryoshka carrier filesystem type: %x: ", context -> carrier_fs);
 
   return 0;
 
   bad:
-    kfree(mc);
+    kfree(context);
+    kfree(carrier);
+    kfree(entropy);
+    kfree(vfat);
     return ret1 && ret2;
 }
 
 static void matryoshka_dtr(struct dm_target *ti) {
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+  struct matryoshka_context *context = (struct matryoshka_context*) ti -> private;
+  struct matryoshka_device *carrier = (struct matryoshka_device*) context -> carrier;
+  struct matryoshka_device *entropy = (struct matryoshka_device*) context -> entropy;
 
-  dm_put_device(ti, mc -> carrier);
-  dm_put_device(ti, mc -> entropy);
-  kfree(mc);
+  dm_put_device(ti, carrier -> dev);
+  dm_put_device(ti, entropy -> dev);
+  kfree(context);
+  kfree(carrier);
+  kfree(entropy);
+  kfree(vfat);
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {

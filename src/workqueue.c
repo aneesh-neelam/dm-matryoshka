@@ -3,10 +3,50 @@
 #include "../include/xor.h"
 
 
-void workqueue_do_erasure(void) {
-  // TODO Need to tailor code for kernel module
+static void wakeup_kmatryoshkad(struct matryoshka_context *context) {
+    queue_work(context -> matryoshka_wq, &context -> matryoshka_work);
 }
 
-void workqueue_do_xor(void) {
-  // TODO Need to tailor code for kernel module
+static void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, struct bio *bio) {
+    unsigned long flags;
+    int should_wake = 0; /* Whether kmatryoshkad should be waken up. */
+
+    spin_lock_irqsave(&context->lock, flags);
+    should_wake = !(context->bios.head);
+    bio_list_add(&context->entropy_bios, bio);
+    spin_unlock_irqrestore(&context->lock, flags);
+
+    if (should_wake)
+        kmatryoshkad(context);
+}
+
+static struct bio **kmatryoshkad_init_entropy_bios(struct bio *src, unsigned count) {
+    struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
+    unsigned i;
+
+    if (!bios)
+        goto kxord_init_bios_cleanup;
+
+    for (i = 0; i < count; i++) {
+        /* Clone the BIO for a specific xor device: */
+        bios[i] = mybio_clone(src);
+        if (!bios[i])
+            goto kxord_init_bios_cleanup_bios;
+    }
+    return bios;
+
+kxord_init_bios_cleanup_bios:
+    while (i--)
+        mybio_free(bios[i]);
+
+    kfree(bios);
+kxord_init_bios_cleanup:
+    return NULL;
+}
+
+static inline void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
+    bio->bi_bdev = d->dev->bdev;
+    bio->bi_iter.bi_sector += d->start;
+    bio->bi_private = io;
+    bio->bi_end_io = ep;
 }

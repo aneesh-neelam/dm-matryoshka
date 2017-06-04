@@ -14,16 +14,20 @@
 #define VERSION_PATCH 0
 
 
-/*
- * Matryoshka: Maps in the Matryoshka way.
- */
-struct matryoshka_c {
+struct matryoshka_device {
+  struct matryoshka_c *mc;
+  struct dm_dev *dev;
+	sector_t start;
+}
+
+struct matryoshka_context {
+  spinlock_t lock;
+
   char *passphrase;
-  struct dm_dev *entropy;
-  struct dm_dev *carrier;
   u8 carrier_fs;
-  sector_t carrier_start;
-  sector_t entropy_start;
+
+  struct bio_list entropy_bios;
+  struct bio_list carrier_bios;
 
   struct workqueue_struct *matryoshka_wq;
   struct work_struct matryoshka_work;
@@ -33,6 +37,8 @@ struct matryoshka_c {
   u8 num_carrier; // m
   u8 num_entropy; // k
   u8 num_userdata; // d
+  struct matryoshka_device carrier;
+  struct matryoshka_device entropy;
 };
 
 
