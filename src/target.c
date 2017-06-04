@@ -18,25 +18,31 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   int status;
-  /*
-  int entropy_status;
-  int freelist_status;
+  int i;
+  struct bio entropy_bios[mc -> num_entropy];
+  struct bio carrier_bios[mc -> num_carrier];
 
-
-  entropy_status = get_entropy_blocks(mc -> entropy);
-  // TODO corresponding entropy block in callback
-
-  if (mc -> carrier_fs == FS_VFAT) {
-    //freelist_status = vfat_get_free_blocks(mc -> carrier);
-    // TODO Find free sector from underlying file system
-  } else {
-    return -EIO;
+  for (i = 0; i < mc -> num_carrier) {
+    carrier_bios[i] = clone_bio(bio);
   }
 
-  // TODO erasure code entropy block and carrier block, modify bio and submit
+  for (i = 0; i < mc -> num_entropy) {
+    entropy_bios[i] = clone_bio(bio);
 
-  */
-  // clone_bio
+    entropy_bios[i] -> bi_bdev = mc -> entropy;
+    entropy_bios[i] -> REQ_OP_READ;
+    if (bio_sectors(bio)) {
+      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+    }
+    status = submit_bio_wait(entropy_bios[i]);
+    if (status != 0) {
+      return -EIO;
+    }
+    printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
+  }
+
+  for (i = 0; i < mc -> num_entropy) {
+  }
 
   return DM_MAPIO_REMAPPED;
 }
@@ -45,26 +51,30 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
   int status;
+  int i;
+  struct bio entropy_bios[mc -> num_entropy];
+  struct bio carrier_bios[mc -> num_carrier];
 
-  /*
-  int entropy_status;
-  int freelist_status;
+  for (i = 0; i < mc -> num_entropy) {
+    entropy_bios[i] = clone_bio(bio);
 
-
-
-  entropy_status = get_entropy_blocks(mc -> entropy);
-  // TODO corresponding entropy block in callback
-
-  if (mc -> carrier_fs == FS_VFAT) {
-    //freelist_status = vfat_get_free_blocks(mc -> carrier);
-    // TODO Find free sector from underlying file system
-  } else {
-    return -EIO;
+    entropy_bios[i] -> bi_bdev = mc -> entropy;
+    entropy_bios[i] -> REQ_OP_READ;
+    if (bio_sectors(bio)) {
+      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+    }
+    status = submit_bio_wait(entropy_bios[i]);
+    if (status != 0) {
+      return -EIO;
+    }
+    printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
-  // TODO erasure code entropy block and carrier block, modify bio and submit
+  for (i = 0; i < mc -> num_entropy) {
+    carrier_bios[i] = clone_bio(bio);
 
-  */
+    carrier_bios[i] -> bi_bdev = mc -> carrier;
+  }
 
   return DM_MAPIO_REMAPPED;
 }
