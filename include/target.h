@@ -30,9 +30,9 @@ struct matryoshka_c {
 
   struct fs_vfat *fs;
 
-  unsigned int num_carrier; // m
-  unsigned int num_entropy; // k
-  unsigned int num_userdata; // d
+  u8 num_carrier; // m
+  u8 num_entropy; // k
+  u8 num_userdata; // d
 };
 
 

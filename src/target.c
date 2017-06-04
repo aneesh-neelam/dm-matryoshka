@@ -38,12 +38,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   */
   // clone_bio
 
-
-  status = submit_bio(bio);
-  if (status != 0) {
-    return -EIO;
-  }
-  return DM_MAPIO_SUBMITTED;
+  return DM_MAPIO_REMAPPED;
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
@@ -70,11 +65,8 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
   */
-  status = submit_bio(bio);
-  if (status != 0) {
-    return -EIO;
-  }
-  return DM_MAPIO_SUBMITTED;
+
+  return DM_MAPIO_REMAPPED;
 }
 
 /*
