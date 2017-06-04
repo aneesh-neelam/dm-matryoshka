@@ -35,7 +35,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
   */
-  status = submit_bio_wait(bio)
+  status = submit_bio_wait(bio);
   if (status != 0) {
     return -EIO;
   }
@@ -64,7 +64,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   // TODO erasure code entropy block and carrier block, modify bio and submit
 
   */
-  status = submit_bio_wait(bio)
+  status = submit_bio_wait(bio);
   if (status != 0) {
     return -EIO;
   }
