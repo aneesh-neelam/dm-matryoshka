@@ -38,7 +38,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     if (status != 0) {
       return -EIO;
     }
-    printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
+    printk(KERN_DEBUG "Read: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
   for (i = 0; i < mc -> num_carrier; ++i) {
@@ -71,7 +71,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     if (status != 0) {
       return -EIO;
     }
-    printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
+    printk(KERN_DEBUG "Write: Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
   for (i = 0; i < mc -> num_carrier; ++i) {
