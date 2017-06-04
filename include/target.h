@@ -44,6 +44,10 @@ struct matryoshka_context {
   struct matryoshka_device entropy;
 };
 
+struct io {
+
+};
+
 
 int get_entropy_blocks(struct dm_dev*);
 

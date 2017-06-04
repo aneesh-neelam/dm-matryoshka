@@ -3,11 +3,11 @@
 #include "../include/xor.h"
 #include "../include/target.h"
 
-static void wakeup_kmatryoshkad(struct matryoshka_context *context) {
+void wakeup_kmatryoshkad(struct matryoshka_context *context) {
     queue_work(context -> matryoshka_wq, &context -> matryoshka_work);
 }
 
-static void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, struct bio *bio) {
+void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, struct bio *bio) {
     unsigned long flags;
     int should_wake = 0; /* Whether kmatryoshkad should be waken up. */
 
@@ -20,7 +20,7 @@ static void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, s
         kmatryoshkad(context);
 }
 
-static struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
+struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
     struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
     unsigned i;
 
