@@ -15,7 +15,7 @@
 #include "../include/xor.h"
 
 
-static struct bio *mybio_clone(struct bio *sbio)
+struct bio *mybio_clone(struct bio *sbio)
 {
     struct bio *bio = bio_kmalloc(GFP_NOIO, sbio->bi_max_vecs);
     struct bio_vec *bvec, *sbvec;

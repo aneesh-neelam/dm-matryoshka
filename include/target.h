@@ -1,3 +1,6 @@
+#ifndef TARGET_H
+#define TARGET_H
+
 #include <linux/types.h>
 #include <linux/device-mapper.h>
 
@@ -46,3 +49,7 @@ int get_entropy_blocks(struct dm_dev*);
 
 int matryoshka_read(struct dm_target*, struct bio*);
 int matryoshka_write(struct dm_target*, struct bio*);
+
+struct bio *mybio_clone(struct bio *);
+
+#endif /* TARGET_H */

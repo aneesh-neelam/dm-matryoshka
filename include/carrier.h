@@ -1,3 +1,6 @@
+#ifndef CARRIER_H
+#define CARRIER_H
+
 #include <linux/types.h>
 
 #define FS_VFAT 0x01
@@ -10,3 +13,5 @@
 
 
 u8 get_carrier_fs(char*);
+
+#endif /* CARRIER_H */

@@ -1,7 +1,7 @@
-#include <linux/device-mapper.h>
-
 #ifndef FS_H
 #define FS_H
+
+#include <linux/device-mapper.h>
 
 // Last cluster
 #define FAT_LAST (-1)
