@@ -23,16 +23,16 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct bio carrier_bios[mc -> num_carrier];
 
   for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = clone_bio(bio);
+    carrier_bios[i] = bio_clone(bio);
   }
 
   for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = clone_bio(bio);
+    entropy_bios[i] = bio_clone(bio);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy;
-    entropy_bios[i] -> REQ_OP_READ;
+    entropy_bios[i].bi_bdev = mc -> entropy;
+    entropy_bios[i].bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+      entropy_bios[i].bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
     status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
@@ -56,16 +56,16 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct bio carrier_bios[mc -> num_carrier];
 
   for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = clone_bio(bio);
+    carrier_bios[i] = bio_clone(bio);
   }
 
   for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = clone_bio(bio);
+    entropy_bios[i] = bio_clone(bio);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy;
-    entropy_bios[i] -> REQ_OP_READ;
+    entropy_bios[i].bi_bdev = mc -> entropy;
+    entropy_bios[i].bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+      entropy_bios[i].bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
     status = submit_bio_wait(entropy_bios[i]);
     if (status != 0) {
