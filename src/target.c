@@ -52,15 +52,6 @@ mybio_clone_cleanup:
     return NULL;
 }
 
-/**
-  Deallocates a bio structure and all of the pages associated to its bio_vec's.
-  \param[in] bio the bio to free.
-*/
-void mybio_free(struct bio *bio) {
-    bio_free_pages(bio);
-    bio_free(bio);
-}
-
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
