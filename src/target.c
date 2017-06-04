@@ -36,11 +36,11 @@ static struct bio *mybio_clone(struct bio *sbio)
         bvec->bv_len = sbvec->bv_len;
     }
 
-    bio->bi_sector = sbio->bi_sector;
+    bio->bi_iter.bi_sector = sbio->bi_iter.bi_sector;
     bio->bi_opf = sbio->bi_opf;
     bio->bi_vcnt = sbio->bi_vcnt;
-    bio->bi_size = sbio->bi_size;
-    bio->bi_idx = 0;
+    bio->bi_iter.bi_size = sbio->bi_iter.bi_size;
+    bio->bi_iter.bi_idx = 0;
     return bio;
 
 mybio_clone_cleanup:
@@ -62,7 +62,7 @@ static void mybio_free(struct bio *bio)
     for (i = 0; i < bio->bi_max_vecs; i++, bvec++)
         __free_page(bvec->bv_page);
 
-    (*bio->bi_destructor)(bio);
+    bio_free(bio);
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
