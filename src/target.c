@@ -19,8 +19,8 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 
   int status;
   int i;
-  struct bio **entropy_bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
-  struct bio **carrier_bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);;
+  struct bio **entropy_bios = kmalloc(mc -> num_entropy * sizeof(struct bio*), GFP_NOIO);
+  struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
     carrier_bios[i] = bio_clone(bio, GFP_NOIO);
@@ -29,7 +29,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = bio_clone(bio, GFP_NOIO);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy;
+    entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
       entropy_bios[i].bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
@@ -52,8 +52,8 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
 
   int status;
   int i;
-  struct bio **entropy_bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
-  struct bio **carrier_bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);;
+  struct bio **entropy_bios = kmalloc(mc -> num_entropy * sizeof(struct bio*), GFP_NOIO);
+  struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
     carrier_bios[i] = bio_clone(bio, GFP_NOIO);
@@ -62,7 +62,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = bio_clone(bio, GFP_NOIO);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy;
+    entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
