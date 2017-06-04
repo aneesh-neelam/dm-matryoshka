@@ -22,11 +22,11 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct bio entropy_bios[mc -> num_entropy];
   struct bio carrier_bios[mc -> num_carrier];
 
-  for (i = 0; i < mc -> num_carrier) {
+  for (i = 0; i < mc -> num_carrier; ++i) {
     carrier_bios[i] = clone_bio(bio);
   }
 
-  for (i = 0; i < mc -> num_entropy) {
+  for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = clone_bio(bio);
 
     entropy_bios[i] -> bi_bdev = mc -> entropy;
@@ -41,7 +41,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
-  for (i = 0; i < mc -> num_entropy) {
+  for (i = 0; i < mc -> num_carrier; ++i) {
   }
 
   return DM_MAPIO_REMAPPED;
@@ -55,7 +55,11 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct bio entropy_bios[mc -> num_entropy];
   struct bio carrier_bios[mc -> num_carrier];
 
-  for (i = 0; i < mc -> num_entropy) {
+  for (i = 0; i < mc -> num_carrier; ++i) {
+    carrier_bios[i] = clone_bio(bio);
+  }
+
+  for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = clone_bio(bio);
 
     entropy_bios[i] -> bi_bdev = mc -> entropy;
@@ -70,10 +74,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     printk(KERN_DEBUG "Reading entropy device at sector: %llu", entropy_bios[i] -> bi_iter.bi_sector);
   }
 
-  for (i = 0; i < mc -> num_entropy) {
-    carrier_bios[i] = clone_bio(bio);
-
-    carrier_bios[i] -> bi_bdev = mc -> carrier;
+  for (i = 0; i < mc -> num_carrier; ++i) {
   }
 
   return DM_MAPIO_REMAPPED;
