@@ -14,6 +14,57 @@
 #include "../include/xor.h"
 
 
+static struct bio *mybio_clone(struct bio *sbio)
+{
+    struct bio *bio = bio_kmalloc(GFP_NOIO, sbio->bi_max_vecs);
+    struct bio_vec *bvec, *sbvec;
+    unsigned short i;
+
+    if (!bio)
+        return NULL;
+
+    memcpy(bio->bi_io_vec, sbio->bi_io_vec,
+           sbio->bi_max_vecs * sizeof(struct bio_vec));
+
+    for (i = 0, bvec = bio->bi_io_vec, sbvec = sbio->bi_io_vec;
+         i < bio->bi_max_vecs; i++, bvec++, sbvec++) {
+        bvec->bv_page = alloc_page(GFP_NOIO);
+        if (!bvec->bv_page)
+            goto mybio_clone_cleanup;
+
+        bvec->bv_offset = sbvec->bv_offset;
+        bvec->bv_len = sbvec->bv_len;
+    }
+
+    bio->bi_sector = sbio->bi_sector;
+    bio->bi_opf = sbio->bi_opf;
+    bio->bi_vcnt = sbio->bi_vcnt;
+    bio->bi_size = sbio->bi_size;
+    bio->bi_idx = 0;
+    return bio;
+
+mybio_clone_cleanup:
+    while (i--) {
+        bvec--;
+        __free_page(bvec->bv_page);
+    }
+    return NULL;
+}
+
+/**
+  Deallocates a bio structure and all of the pages associated to its bio_vec's.
+  \param[in] bio the bio to free.
+*/
+static void mybio_free(struct bio *bio)
+{
+    unsigned short i;
+    struct bio_vec *bvec = bio->bi_io_vec;
+    for (i = 0; i < bio->bi_max_vecs; i++, bvec++)
+        __free_page(bvec->bv_page);
+
+    (*bio->bi_destructor)(bio);
+}
+
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
 
@@ -23,11 +74,11 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = bio_clone(bio, GFP_NOIO);
+    carrier_bios[i] = mybio_clone(bio, GFP_NOIO);
   }
 
   for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = bio_clone(bio, GFP_NOIO);
+    entropy_bios[i] = mybio_clone(bio, GFP_NOIO);
 
     entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
@@ -57,11 +108,11 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = bio_clone(bio, GFP_NOIO);
+    carrier_bios[i] = mybio_clone(bio, GFP_NOIO);
   }
 
   for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = bio_clone(bio, GFP_NOIO);
+    entropy_bios[i] = mybio_clone(bio, GFP_NOIO);
 
     entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
