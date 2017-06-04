@@ -34,6 +34,9 @@ int vfat_get_header(struct fs_vfat *vfat, struct dm_dev *carrier, sector_t start
   vfat_page = alloc_page(GFP_KERNEL);
 
   status = read_page(carrier -> bdev, vfat_header_sector, PAGE_SIZE, vfat_page);
+  if (status != 0) {
+    return status;
+  }
 
   buffer = (char*) page_address(vfat_page);
 
@@ -102,12 +105,16 @@ int vfat_is_cluster_used(struct fs_vfat *vfat, unsigned int cluster) {
   int fat = 0;
   char *buffer;
   unsigned int next;
+  int status;
   int bytes = (vfat -> bits == 32 ? 4 : 2);
 
   sector_t sector = (vfat -> fatStart + vfat -> fatSize * fat + (vfat -> bits * cluster) / 8) >> SECTOR_SHIFT;
   struct page *vfat_page = alloc_page(GFP_KERNEL);
 
-  read_page(carrier -> bdev, sector, PAGE_SIZE, vfat_page);
+  status = read_page(carrier -> bdev, sector, PAGE_SIZE, vfat_page);
+  if (status != 0) {
+    return -EIO;
+  }
 
   buffer = (char*) page_address(vfat_page);
 
