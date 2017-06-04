@@ -19,8 +19,8 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 
   int status;
   int i;
-  struct bio entropy_bios[mc -> num_entropy];
-  struct bio carrier_bios[mc -> num_carrier];
+  struct bio entropy_bios = struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
+  struct bio carrier_bios = struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
     carrier_bios[i] = bio_clone(bio);
@@ -52,8 +52,8 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
 
   int status;
   int i;
-  struct bio entropy_bios[mc -> num_entropy];
-  struct bio carrier_bios[mc -> num_carrier];
+  struct bio entropy_bios = struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
+  struct bio carrier_bios = struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);;
 
   for (i = 0; i < mc -> num_carrier; ++i) {
     carrier_bios[i] = bio_clone(bio);
