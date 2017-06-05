@@ -227,11 +227,11 @@ static void matryoshka_dtr(struct dm_target *ti) {
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   int status;
 
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+  struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
-  bio -> bi_bdev = mc -> carrier -> bdev;
+  bio -> bi_bdev = mc -> carrier -> dev -> bdev;
   if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = mc -> carrier_start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+    bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
   status = DM_MAPIO_REMAPPED;
 
