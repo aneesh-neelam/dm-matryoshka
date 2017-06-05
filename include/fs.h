@@ -85,5 +85,6 @@ int vfat_get_header(struct fs_vfat*, struct dm_dev*, sector_t);
 int vfat_parse_header(struct fs_vfat*, char*, int);
 int vfat_compute_values(struct fs_vfat*);
 int vfat_is_cluster_used(struct fs_vfat *,unsigned int);
+int read_page(struct block_device *device, sector_t sector, int size, struct page *page)
 
 #endif /* FS_H */
