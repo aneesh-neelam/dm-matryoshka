@@ -13,6 +13,7 @@
 #include "../include/fs.h"
 #include "../include/target.h"
 #include "../include/xor.h"
+#include "../include/workqueue.h"
 
 
 struct bio *mybio_clone(struct bio *sbio)
@@ -123,11 +124,12 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   struct matryoshka_device *carrier;
   struct matryoshka_device *entropy;
   struct fs_vfat *vfat;
-
   int ret1, ret2;
   int passphrase_length;
   unsigned long long tmp;
   char dummy;
+
+  ret1 = ret2 = -EIO;
 
   if (argc != 6) {
     ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
@@ -197,8 +199,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   context -> matryoshka_wq = create_singlethread_workqueue("kmatryoshkad");
   if (!context -> matryoshka_wq) {
       DMERR("Couldn't start kxord");
-      r = -ENOMEM;
-      goto bad;
+      ret1 = ret2 = -ENOMEM;
   }
   INIT_WORK(&context -> matryoshka_work, kmatryoshkad_do);
 
