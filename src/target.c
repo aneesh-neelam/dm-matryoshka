@@ -73,35 +73,30 @@ struct bio *custom_bio_clone(struct bio *sbio) {
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
-  int ret;
-  struct bio *newbio = custom_bio_clone(bio);
-  newbio -> bi_bdev = mc -> entropy -> dev -> bdev;
-  newbio->bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
-  // int ret = submit_bio_wait(newbio);
-  printk(KERN_DEBUG "Successfully read from entropy device: %d", ret);
+  int is_used = -1;
 
   bio -> bi_bdev = mc -> carrier -> dev -> bdev;
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
 
+  is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
+  printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
 
   return DM_MAPIO_REMAPPED;
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
-
-  struct bio *newbio = custom_bio_clone(bio);
-  newbio -> bi_bdev = mc -> entropy -> dev -> bdev;
-  newbio->bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
-  int ret = submit_bio_wait(newbio);
-  printk(KERN_DEBUG "Successfully read from entropy device: %d", ret);
+  int is_used = -1;
 
   bio -> bi_bdev = mc -> carrier -> dev -> bdev;
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
+
+  is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
+  printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
 
   return DM_MAPIO_REMAPPED;
 }
@@ -244,15 +239,15 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   switch (bio_op(bio)) {
     case REQ_OP_READ:
       // Read Operation
-      kmatryoshkad_queue_bio(mc, bio);
-      return DM_MAPIO_SUBMITTED;
-      // return matryoshka_read(ti, bio);
+      // kmatryoshkad_queue_bio(mc, bio);
+      // return DM_MAPIO_SUBMITTED;
+      return matryoshka_read(ti, bio);
 
     case REQ_OP_WRITE:
       // Write Operation
-      kmatryoshkad_queue_bio(mc, bio);
-      return DM_MAPIO_SUBMITTED;
-      // return matryoshka_read(ti, bio);
+      // kmatryoshkad_queue_bio(mc, bio);
+      // return DM_MAPIO_SUBMITTED;
+      return matryoshka_read(ti, bio);
 
     default:
       bio -> bi_bdev = mc -> carrier -> dev -> bdev;
