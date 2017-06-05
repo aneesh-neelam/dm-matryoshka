@@ -61,7 +61,7 @@ static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio)
   // kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_read);
 
   // submit_bio(bio);
-  vfat_page = alloc_page(GFP_KERNEL);
+  page = alloc_page(GFP_KERNEL);
   struct bio *newbio = bio_alloc(GFP_NOIO, 1);
   kmatryoshkad_init_dev_bio(newbio, mc -> carrier, bio, kmatryoshkad_end_read);
   bio_add_page(newbio, page, bio -> bi_iter.bi_size, 0);
