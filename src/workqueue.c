@@ -53,7 +53,7 @@ void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, str
 }
 
 static void kmatryoshkad_end_read(struct bio *bio) {
-  bio_copy_data((struct bio*) bio->private, bio);
+  bio_copy_data((struct bio*) bio->bi_private, bio);
   bio_endio(bio);
 }
 
@@ -61,7 +61,7 @@ static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio)
   // kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_read);
 
   // submit_bio(bio);
-  page = alloc_page(GFP_KERNEL);
+  struct page *page = alloc_page(GFP_KERNEL);
   struct bio *newbio = bio_alloc(GFP_NOIO, 1);
   kmatryoshkad_init_dev_bio(newbio, mc -> carrier, bio, kmatryoshkad_end_read);
   bio_add_page(newbio, page, bio -> bi_iter.bi_size, 0);
