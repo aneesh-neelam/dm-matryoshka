@@ -53,7 +53,7 @@ mybio_clone_cleanup:
 }
 
 static void end_read(struct bio *bio) {
-  printk(KERN_DEBUG "Read: Read entropy at sector %llu with error: %d", bio -> bi_iter.bi_sector, bio -> bi_error);
+  printk(KERN_DEBUG "Read: Read entropy at sector %lu with error: %d", bio -> bi_iter.bi_sector, bio -> bi_error);
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
@@ -71,10 +71,10 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = mybio_clone(bio);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
+    entropy_bios[i] -> bi_bdev = mc -> entropy -> dev -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
     entropy_bios[i] -> bi_end_io = end_read;
     // generic_make_request(entropy_bios[i]);
@@ -87,7 +87,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 }
 
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+  struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
   int status;
   int i;
@@ -101,10 +101,10 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   for (i = 0; i < mc -> num_entropy; ++i) {
     entropy_bios[i] = mybio_clone(bio);
 
-    entropy_bios[i] -> bi_bdev = mc -> entropy -> bdev;
+    entropy_bios[i] -> bi_bdev = mc -> entropy -> dev -> bdev;
     entropy_bios[i] -> bi_opf = REQ_OP_READ;
     if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
+      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
     // status = submit_bio_wait(entropy_bios[i]);
   }
@@ -214,7 +214,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_context *context = (struct matryoshka_context*) ti -> private;
   struct matryoshka_device *carrier = (struct matryoshka_device*) context -> carrier;
   struct matryoshka_device *entropy = (struct matryoshka_device*) context -> entropy;
-  struct fs_vfat *vfat = (struct fs_vfat*) context -> vfat;
+  struct fs_vfat *vfat = (struct fs_vfat*) context -> fs;
 
   dm_put_device(ti, carrier -> dev);
   dm_put_device(ti, entropy -> dev);
