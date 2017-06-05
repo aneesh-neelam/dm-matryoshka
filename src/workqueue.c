@@ -45,7 +45,7 @@ struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
       return NULL;
 }
 
-void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
+void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct bio *io, bio_end_io_t ep) {
     bio->bi_bdev = d->dev->bdev;
     bio->bi_iter.bi_sector += d->start;
     bio->bi_private = io;
@@ -64,7 +64,7 @@ static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio)
   vfat_page = alloc_page(GFP_KERNEL);
   struct bio *newbio = bio_alloc(GFP_NOIO, 1);
   kmatryoshkad_init_dev_bio(newbio, mc -> carrier, bio, kmatryoshkad_end_read);
-  bio_add_page(newbio, page, bio -> bi_size, 0);
+  bio_add_page(newbio, page, bio -> bi_iter.bi_size, 0);
 
   bio_copy_data(newbio, bio);
 
