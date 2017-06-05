@@ -45,7 +45,7 @@ struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
       return NULL;
 }
 
-inline void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
+void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
     bio->bi_bdev = d->dev->bdev;
     bio->bi_iter.bi_sector += d->start;
     bio->bi_private = io;
