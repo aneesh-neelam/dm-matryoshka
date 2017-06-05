@@ -79,10 +79,10 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
-
+  /*
   is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
   printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
-
+  */
   return DM_MAPIO_REMAPPED;
 }
 
@@ -94,10 +94,10 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
-
+  /*
   is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
   printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
-
+  */
   return DM_MAPIO_REMAPPED;
 }
 
