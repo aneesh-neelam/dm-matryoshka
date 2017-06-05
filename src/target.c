@@ -57,7 +57,7 @@ static void end_read(struct bio *bio) {
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
-  struct matryoshka_c *mc = (struct matryoshka_c*) ti -> private;
+  struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
   int status;
   int i;
@@ -77,7 +77,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
       entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy_start + dm_target_offset(ti, bio->bi_iter.bi_sector);
     }
     entropy_bios[i] -> bi_end_io = end_read;
-    generic_make_request(entropy_bios[i]);
+    // generic_make_request(entropy_bios[i]);
   }
 
   for (i = 0; i < mc -> num_carrier; ++i) {
@@ -170,13 +170,15 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     ti->error = "dm-matryoshka: Invalid carrier device sector";
     goto bad;
   }
-  context -> carrier_start = tmp;
+  carrier -> start = tmp;
+  context -> carrier = carrier;
 
   if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid entropy device sector";
     goto bad;
   }
-  context -> entropy_start = tmp;
+  entropy -> start = tmp;
+  context -> entropy = entropy;
 
   vfat_get_header(vfat, carrier -> dev, carrier -> start);
   context -> fs = vfat;
@@ -188,6 +190,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
+
   ti -> private = context;
 
   printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", context -> passphrase);
@@ -211,6 +214,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_context *context = (struct matryoshka_context*) ti -> private;
   struct matryoshka_device *carrier = (struct matryoshka_device*) context -> carrier;
   struct matryoshka_device *entropy = (struct matryoshka_device*) context -> entropy;
+  struct fs_vfat *vfat = (struct fs_vfat*) context -> vfat;
 
   dm_put_device(ti, carrier -> dev);
   dm_put_device(ti, entropy -> dev);

@@ -40,8 +40,8 @@ struct matryoshka_context {
   u8 num_carrier; // m
   u8 num_entropy; // k
   u8 num_userdata; // d
-  struct matryoshka_device carrier;
-  struct matryoshka_device entropy;
+  struct matryoshka_device *carrier;
+  struct matryoshka_device *entropy;
 };
 
 struct io {
