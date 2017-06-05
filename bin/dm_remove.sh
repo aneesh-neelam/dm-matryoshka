@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-dmsetup remove mydev2
+dmsetup remove mydev
