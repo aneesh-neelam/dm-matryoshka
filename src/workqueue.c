@@ -45,31 +45,33 @@ struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
       return NULL;
 }
 
-void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
+void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io) {
     bio->bi_bdev = d->dev->bdev;
     bio->bi_iter.bi_sector += d->start;
     bio->bi_private = io;
-    bio->bi_end_io = ep;
+    // bio->bi_end_io = ep;
 }
 
 static void kmatryoshkad_end_read(struct bio *bio, int error) {
-
+  bio_endio(bio, error);
 }
 
 static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
   kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_read);
+  bio -> bi_end_io = kmatryoshkad_end_read;
 
-  submit_bio_wait(bio);
+  submit_bio(bio);
 }
 
 static void kmatryoshkad_end_write(struct bio *bio, int error) {
-
+  bio_endio(bio, error);
 }
 
 static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
-  kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_write);
+  kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL);
+  bio -> bi_end_io = kmatryoshkad_end_write;
 
-  submit_bio_wait(bio);
+  submit_bio(bio);
 }
 
 void kmatryoshkad_do(struct work_struct *work) {
