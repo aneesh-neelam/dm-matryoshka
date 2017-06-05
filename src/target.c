@@ -52,37 +52,39 @@ mybio_clone_cleanup:
     }
     return NULL;
 }
-/*
-static void end_read(struct bio *bio) {
-  printk(KERN_DEBUG "Read: Read entropy at sector %lu with error: %d", bio -> bi_iter.bi_sector, bio -> bi_error);
+
+struct bio *custom_bio_clone(struct bio *sbio) {
+  struct bio *bio = bio_alloc(GFP_NOIO, bio_segments(sbio));
+  struct bio_vec bv;
+  struct bvec_iter iter;
+  struct page *page;
+
+  bio_for_each_segment(bv, sbio, iter) {
+		page = alloc_page(GFP_KERNEL);
+    bio_add_page(bio, page, bv.bv_len, bv.bv_offset);
+	}
+
+  if (sbio -> bi_next != NULL) {
+    bio -> bi_next = custom_bio_clone(sbio -> bi_next);
+  }
+
+  return bio;
 }
 
 int matryoshka_read(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
-  int status;
-  int i;
-  struct bio **entropy_bios = kmalloc(mc -> num_entropy * sizeof(struct bio*), GFP_NOIO);
-  struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
+  struct bio *newbio = custom_bio_clone(bio);
+  newbio -> bi_bdev = mc -> entropy -> dev -> bdev;
+  newbio->bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+  int ret = submit_bio_wait(newbio);
+  printk(KERN_DEBUG "Successfully read from entropy device: %d", ret);
 
-  for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = mybio_clone(bio);
+  bio -> bi_bdev = mc -> carrier -> dev -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
 
-  for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = mybio_clone(bio);
-
-    entropy_bios[i] -> bi_bdev = mc -> entropy -> dev -> bdev;
-    entropy_bios[i] -> bi_opf = REQ_OP_READ;
-    if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector);
-    }
-    entropy_bios[i] -> bi_end_io = end_read;
-    // generic_make_request(entropy_bios[i]);
-  }
-
-  for (i = 0; i < mc -> num_carrier; ++i) {
-  }
 
   return DM_MAPIO_REMAPPED;
 }
@@ -90,32 +92,20 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
 int matryoshka_write(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
-  int status;
-  int i;
-  struct bio **entropy_bios = kmalloc(mc -> num_entropy * sizeof(struct bio*), GFP_NOIO);
-  struct bio **carrier_bios = kmalloc(mc -> num_carrier * sizeof(struct bio*), GFP_NOIO);;
+  struct bio *newbio = custom_bio_clone(bio);
+  newbio -> bi_bdev = mc -> entropy -> dev -> bdev;
+  newbio->bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+  int ret = submit_bio_wait(newbio);
+  printk(KERN_DEBUG "Successfully read from entropy device: %d", ret);
 
-  for (i = 0; i < mc -> num_carrier; ++i) {
-    carrier_bios[i] = mybio_clone(bio);
-  }
-
-  for (i = 0; i < mc -> num_entropy; ++i) {
-    entropy_bios[i] = mybio_clone(bio);
-
-    entropy_bios[i] -> bi_bdev = mc -> entropy -> dev -> bdev;
-    entropy_bios[i] -> bi_opf = REQ_OP_READ;
-    if (bio_sectors(bio)) {
-      entropy_bios[i] -> bi_iter.bi_sector = mc -> entropy -> start + dm_target_offset(ti, bio->bi_iter.bi_sector);
-    }
-    // status = submit_bio_wait(entropy_bios[i]);
-  }
-
-  for (i = 0; i < mc -> num_carrier; ++i) {
+  bio -> bi_bdev = mc -> carrier -> dev -> bdev;
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
 
   return DM_MAPIO_REMAPPED;
 }
-*/
+
 /*
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
@@ -246,13 +236,15 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   switch (bio_op(bio)) {
     case REQ_OP_READ:
       // Read Operation
-      kmatryoshkad_queue_bio(mc, bio);
-      return DM_MAPIO_SUBMITTED;
+      //kmatryoshkad_queue_bio(mc, bio);
+      //return DM_MAPIO_SUBMITTED;
+      return matryoshka_read(ti, bio);
 
     case REQ_OP_WRITE:
       // Write Operation
-      kmatryoshkad_queue_bio(mc, bio);
-      return DM_MAPIO_SUBMITTED;
+      //kmatryoshkad_queue_bio(mc, bio);
+      //return DM_MAPIO_SUBMITTED;
+      return matryoshka_read(ti, bio);
 
     default:
       bio -> bi_bdev = mc -> carrier -> dev -> bdev;
