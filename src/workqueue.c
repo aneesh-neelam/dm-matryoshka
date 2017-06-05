@@ -7,13 +7,13 @@ void wakeup_kmatryoshkad(struct matryoshka_context *context) {
     queue_work(context -> matryoshka_wq, &context -> matryoshka_work);
 }
 
-void kmatryoshkad_queue_entropy_bio(struct matryoshka_context *context, struct bio *bio) {
+void kmatryoshkad_queue_bio(struct matryoshka_context *context, struct bio *bio) {
     unsigned long flags;
     int should_wake = 0; /* Whether kmatryoshkad should be waken up. */
 
     spin_lock_irqsave(&context->lock, flags);
-    should_wake = !(context->entropy_bios.head);
-    bio_list_add(&context->entropy_bios, bio);
+    should_wake = !(context->bios.head);
+    bio_list_add(&context->bios, bio);
     spin_unlock_irqrestore(&context->lock, flags);
 
     if (should_wake)
@@ -51,21 +51,21 @@ inline void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device 
     bio->bi_end_io = ep;
 }
 
-void kmatryoshkad_end_read(struct bio *bio, int error) {
+static void kmatryoshkad_end_read(struct bio *bio, int error) {
 
 }
 
-void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
+static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
   kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_read);
 
   submit_bio_wait(bio);
 }
 
-void kmatryoshkad_end_write(struct bio *bio, int error) {
+static void kmatryoshkad_end_write(struct bio *bio, int error) {
 
 }
 
-void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
+static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
   kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_write);
 
   submit_bio_wait(bio);
