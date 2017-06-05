@@ -193,6 +193,15 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   ti -> private = context;
 
+  /* Initilize kmatryoshkad thread: */
+  context -> matryoshka_wq = create_singlethread_workqueue("kmatryoshkad");
+  if (!context -> matryoshka_wq) {
+      DMERR("Couldn't start kxord");
+      r = -ENOMEM;
+      goto bad;
+  }
+  INIT_WORK(&context -> matryoshka_work, kmatryoshkad_do);
+
   printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", context -> passphrase);
   printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
   printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", context -> carrier -> start);
@@ -203,6 +212,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   return 0;
 
   bad:
+    destroy_workqueue(context -> matryoshka_wq);
     kfree(context);
     kfree(carrier);
     kfree(entropy);
@@ -216,8 +226,13 @@ static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_device *entropy = (struct matryoshka_device*) context -> entropy;
   struct fs_vfat *vfat = (struct fs_vfat*) context -> fs;
 
+  flush_workqueue(context->matryoshka_wq);
+  flush_scheduled_work();
+  destroy_workqueue(context->matryoshka_wq);
+
   dm_put_device(ti, carrier -> dev);
   dm_put_device(ti, entropy -> dev);
+
   kfree(context);
   kfree(carrier);
   kfree(entropy);
@@ -225,34 +240,26 @@ static void matryoshka_dtr(struct dm_target *ti) {
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
-  int status;
-
   struct matryoshka_context *mc = (struct matryoshka_context*) ti -> private;
 
-  bio -> bi_bdev = mc -> carrier -> dev -> bdev;
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
-  }
-  status = DM_MAPIO_REMAPPED;
-
   switch (bio_op(bio)) {
-
     case REQ_OP_READ:
       // Read Operation
-      status = matryoshka_read(ti, bio);
-      break;
+      kmatryoshkad_queue_bio(mc, bio);
+      return DM_MAPIO_SUBMITTED;
 
     case REQ_OP_WRITE:
       // Write Operation
-      status = matryoshka_write(ti, bio);
-      break;
+      kmatryoshkad_queue_bio(mc, bio);
+      return DM_MAPIO_SUBMITTED;
 
     default:
-      printk(KERN_DEBUG "dm-matryoshka bio_op: other");
-      break;
+      bio -> bi_bdev = mc -> carrier -> dev -> bdev;
+      if (bio_sectors(bio)) {
+        bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
+      }
+      return DM_MAPIO_REMAPPED;
   }
-
-  return status;
 }
 
 static struct target_type matryoshka_target = {

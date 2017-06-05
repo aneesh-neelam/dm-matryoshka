@@ -50,3 +50,39 @@ inline void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device 
     bio->bi_private = io;
     bio->bi_end_io = ep;
 }
+
+void kmatryoshkad_end_read(struct bio *bio, int error) {
+
+}
+
+void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
+
+}
+
+void kmatryoshkad_end_write(struct bio *bio, int error) {
+
+}
+
+void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
+
+}
+
+void kmatryoshkad_do(struct work_struct *work) {
+  struct matryoshka_context *mc = container_of(work, struct matryoshka_context, matryoshka_work);
+
+  struct bio_list bios;
+  struct bio *bio;
+  unsigned long flags;
+
+  spin_lock_irqsave(&mc->lock, flags);
+  bios = mc->bios;
+  bio_list_init(&mc->bios);
+  spin_unlock_irqrestore(&mc->lock, flags);
+
+  while ((bio = bio_list_pop(&bios))) {
+      if (bio_data_dir(bio) == READ)
+          kxord_do_read(mc, bio);
+      else
+          kxord_do_write(mc, bio);
+  }
+}
