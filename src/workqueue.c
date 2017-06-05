@@ -56,7 +56,9 @@ void kmatryoshkad_end_read(struct bio *bio, int error) {
 }
 
 void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
+  kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_read);
 
+  submit_bio_wait(bio);
 }
 
 void kmatryoshkad_end_write(struct bio *bio, int error) {
@@ -64,7 +66,9 @@ void kmatryoshkad_end_write(struct bio *bio, int error) {
 }
 
 void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
+  kmatryoshkad_init_dev_bio(bio, mc -> carrier, NULL, kmatryoshkad_end_write);
 
+  submit_bio_wait(bio);
 }
 
 void kmatryoshkad_do(struct work_struct *work) {
@@ -81,8 +85,8 @@ void kmatryoshkad_do(struct work_struct *work) {
 
   while ((bio = bio_list_pop(&bios))) {
       if (bio_data_dir(bio) == READ)
-          kxord_do_read(mc, bio);
+          kmatryoshkad_do_read(mc, bio);
       else
-          kxord_do_write(mc, bio);
+          kmatryoshkad_do_write(mc, bio);
   }
 }

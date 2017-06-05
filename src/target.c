@@ -51,7 +51,7 @@ mybio_clone_cleanup:
     }
     return NULL;
 }
-
+/*
 static void end_read(struct bio *bio) {
   printk(KERN_DEBUG "Read: Read entropy at sector %lu with error: %d", bio -> bi_iter.bi_sector, bio -> bi_error);
 }
@@ -114,7 +114,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
 
   return DM_MAPIO_REMAPPED;
 }
-
+*/
 /*
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */

@@ -29,6 +29,7 @@ struct matryoshka_context {
   char *passphrase;
   u8 carrier_fs;
 
+  struct bio_list bios;
   struct bio_list entropy_bios;
   struct bio_list carrier_bios;
 
