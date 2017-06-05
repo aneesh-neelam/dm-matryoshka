@@ -45,15 +45,15 @@ struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
       return NULL;
 }
 
-void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io) {
+void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
     bio->bi_bdev = d->dev->bdev;
     bio->bi_iter.bi_sector += d->start;
     bio->bi_private = io;
-    // bio->bi_end_io = ep;
+    bio->bi_end_io = ep;
 }
 
-static void kmatryoshkad_end_read(struct bio *bio, int error) {
-  bio_endio(bio, error);
+static void kmatryoshkad_end_read(struct bio *bio) {
+  bio_endio(bio);
 }
 
 static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
@@ -63,8 +63,8 @@ static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio)
   submit_bio(bio);
 }
 
-static void kmatryoshkad_end_write(struct bio *bio, int error) {
-  bio_endio(bio, error);
+static void kmatryoshkad_end_write(struct bio *bio) {
+  bio_endio(bio);
 }
 
 static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
