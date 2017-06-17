@@ -54,3 +54,9 @@ dkms.conf
 .idea/
 CMakeLists.txt
 cmake-build-debug/
+
+# Builder
+.buildconfig
+
+# Geany
+dm-matryoshka.geany
