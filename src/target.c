@@ -120,32 +120,56 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   ret1 = ret2 = -EIO;
 
-  if (argc != 6) {
+  // Check number of arguments
+  if (argc != 8) {
     ti -> error = "dm:matryoshka: Invalid number of arguments for constructor";
     return -EINVAL;
   }
 
-  context = kmalloc(sizeof(*context), GFP_KERNEL);
-  carrier = kmalloc(sizeof(*carrier), GFP_KERNEL);
-  entropy = kmalloc(sizeof(*entropy), GFP_KERNEL);
-  vfat = kmalloc(sizeof(*vfat), GFP_KERNEL);
+  // Allocate memory for data structures
+  context = kmalloc(sizeof(matryoshka_context), GFP_KERNEL);
+  carrier = kmalloc(sizeof(matryoshka_device), GFP_KERNEL);
+  entropy = kmalloc(sizeof(matryoshka_device), GFP_KERNEL);
+  vfat = kmalloc(sizeof(fs_vfat), GFP_KERNEL);
   if (context == NULL || carrier == NULL || entropy == NULL || vfat == NULL) {
-    ti -> error = "dm:matryoshka: Cannot allocate memory for context or device or vfat header";
+    ti -> error = "dm:matryoshka: Cannot allocate memory for context or device or fs header";
     return -ENOMEM;
   }
 
+  // Parse passphrase from arguments
   passphrase_length = strlen(argv[0]);
   context -> passphrase = kmalloc(passphrase_length + 1, GFP_KERNEL);
   if (context -> passphrase == NULL) {
-    ti -> error = "dm:matryoshka: Cannot allocate memory for passphrase";
+    ti -> error = "dm:matryoshka: Cannot allocate memory for passphrase in context";
     return -ENOMEM;
   }
   strncpy(context -> passphrase, argv[0], passphrase_length);
   context -> passphrase[passphrase_length] = '\0';
 
+  // Parse num_carrier (m) from arguments
+  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid number of carrier blocks";
+    goto bad;
+  }
+  context -> num_carrier = tmp;
+
+  // Parse num_entropy (k) from arguments
+  if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
+    ti->error = "dm-matryoshka: Invalid number of entropy blocks";
+    goto bad;
+  }
+  context -> num_entropy = tmp;
+
+  // num_carrier must be less than num_entropy + 1
+  if (num_entropy + 1 <= num_carrier) {
+    ti->error = "dm-matryoshka: Invalid ratio of entropy blocks to carrier blocks";
+    goto bad;
+  }
+
+  // Open carrier and entropy devices
   ret1 = ret2 = -EINVAL;
-  ret1 = dm_get_device(ti, argv[1], dm_table_get_mode(ti -> table), &carrier -> dev);
-  ret2 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &entropy -> dev);
+  ret1 = dm_get_device(ti, argv[3], dm_table_get_mode(ti -> table), &carrier -> dev);
+  ret2 = dm_get_device(ti, argv[5], dm_table_get_mode(ti -> table), &entropy -> dev);
   if (ret1) {
     ti -> error = "dm:matryoshka: Carrier device lookup failed";
     goto bad;
@@ -155,16 +179,17 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     goto bad;
   }
 
-  context -> carrier_fs = get_carrier_fs(argv[5]);
+  // Parse FS typew
+  context -> carrier_fs = get_carrier_fs(argv[7]);
 
-  if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
+  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid carrier device sector";
     goto bad;
   }
   carrier -> start = tmp;
   context -> carrier = carrier;
 
-  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
+  if (sscanf(argv[6], "%llu%c", &tmp, &dummy) != 1) {
     ti->error = "dm-matryoshka: Invalid entropy device sector";
     goto bad;
   }

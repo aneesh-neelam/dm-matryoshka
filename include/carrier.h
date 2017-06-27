@@ -3,7 +3,7 @@
 
 #include <linux/types.h>
 
-#define FS_VFAT 0x01
+#define FS_FAT 0x01
 #define FS_EXFAT 0x02
 #define FS_EXT4 0x03
 #define FS_BTRFS 0x04

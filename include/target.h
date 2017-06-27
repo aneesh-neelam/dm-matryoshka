@@ -29,10 +29,6 @@ struct matryoshka_context {
   char *passphrase;
   u8 carrier_fs;
 
-  struct bio_list bios;
-  struct bio_list entropy_bios;
-  struct bio_list carrier_bios;
-
   struct workqueue_struct *matryoshka_wq;
   struct work_struct matryoshka_work;
 
@@ -40,13 +36,14 @@ struct matryoshka_context {
 
   u8 num_carrier; // m
   u8 num_entropy; // k
-  u8 num_userdata; // d
   struct matryoshka_device *carrier;
   struct matryoshka_device *entropy;
 };
 
 struct io {
-
+  struct bio bio;
+  struct bio_list entropy_bios;
+  struct bio_list carrier_bios;
 };
 
 
