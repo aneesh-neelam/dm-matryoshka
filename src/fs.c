@@ -1,12 +1,12 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-#include "../include/carrier.h"
+#include "../include/fs.h"
 
 
 u8 get_carrier_fs(char *fs) {
-  if (strncmp("vfat", fs, 4) == 0) {
-    return FS_VFAT;
+  if (strncmp("fat", fs, 3) == 0) {
+    return FS_FAT;
   } else if (strncmp("exfat", fs, 5) == 0) {
     return FS_EXFAT;
   } else if (strncmp("ext4", fs, 4) == 0) {

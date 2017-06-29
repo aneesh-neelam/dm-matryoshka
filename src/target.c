@@ -7,10 +7,11 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-#include "../include/carrier.h"
+#include "../include/utility.h"
+#include "../include/fs.h"
 #include "../include/entropy.h"
 #include "../include/erasure.h"
-#include "../include/fs.h"
+#include "../include/fs_fat.h"
 #include "../include/target.h"
 #include "../include/xor.h"
 #include "../include/workqueue.h"
@@ -80,7 +81,7 @@ int matryoshka_read(struct dm_target *ti, struct bio *bio) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
   /*
-  is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
+  is_used = (fat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
   printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
   */
   submit_bio(bio);
@@ -97,7 +98,7 @@ int matryoshka_write(struct dm_target *ti, struct bio *bio) {
     bio->bi_iter.bi_sector = mc -> carrier -> start + dm_target_offset(ti, bio->bi_iter.bi_sector); // TODO Add regular fs free sector
   }
   /*
-  is_used = (vfat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
+  is_used = (fat_is_cluster_used(mc -> fs, bio->bi_iter.bi_sector / mc -> fs -> sectorsPerCluster)) == 0 ? 0 : 1;
   printk(KERN_DEBUG "Sector %lu is %d", bio->bi_iter.bi_sector, is_used);
   */
   submit_bio(bio);
@@ -112,11 +113,10 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   struct matryoshka_context *context;
   struct matryoshka_device *carrier;
   struct matryoshka_device *entropy;
-  struct fs_vfat *vfat;
+  struct fs_fat *fat;
   int ret1, ret2;
   int passphrase_length;
-  unsigned long long tmp;
-  char dummy;
+  int status;
 
   ret1 = ret2 = -EIO;
 
@@ -127,11 +127,11 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   // Allocate memory for data structures
-  context = kmalloc(sizeof(matryoshka_context), GFP_KERNEL);
-  carrier = kmalloc(sizeof(matryoshka_device), GFP_KERNEL);
-  entropy = kmalloc(sizeof(matryoshka_device), GFP_KERNEL);
-  vfat = kmalloc(sizeof(fs_vfat), GFP_KERNEL);
-  if (context == NULL || carrier == NULL || entropy == NULL || vfat == NULL) {
+  context = kmalloc(sizeof(struct matryoshka_context), GFP_KERNEL);
+  carrier = kmalloc(sizeof(struct matryoshka_device), GFP_KERNEL);
+  entropy = kmalloc(sizeof(struct matryoshka_device), GFP_KERNEL);
+  fat = kmalloc(sizeof(struct fs_fat), GFP_KERNEL);
+  if (context == NULL || carrier == NULL || entropy == NULL || fat == NULL) {
     ti -> error = "dm:matryoshka: Cannot allocate memory for context or device or fs header";
     return -ENOMEM;
   }
@@ -147,21 +147,22 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   context -> passphrase[passphrase_length] = '\0';
 
   // Parse num_carrier (m) from arguments
-  if (sscanf(argv[1], "%llu%c", &tmp, &dummy) != 1) {
+  status = convertStringToU8(&(context->num_carrier), argv[1]);
+  if (status) {
     ti->error = "dm-matryoshka: Invalid number of carrier blocks";
     goto bad;
   }
-  context -> num_carrier = tmp;
 
   // Parse num_entropy (k) from arguments
-  if (sscanf(argv[2], "%llu%c", &tmp, &dummy) != 1) {
+  status = convertStringToU8(&(context->num_entropy), argv[2]);
+  if (status) {
     ti->error = "dm-matryoshka: Invalid number of entropy blocks";
     goto bad;
   }
-  context -> num_entropy = tmp;
 
   // num_carrier must be less than num_entropy + 1
-  if (num_entropy + 1 <= num_carrier) {
+  status = checkRatio(context->num_carrier, context->num_entropy);
+  if (status) {
     ti->error = "dm-matryoshka: Invalid ratio of entropy blocks to carrier blocks";
     goto bad;
   }
@@ -179,43 +180,45 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     goto bad;
   }
 
-  // Parse FS typew
-  context -> carrier_fs = get_carrier_fs(argv[7]);
-
-  if (sscanf(argv[4], "%llu%c", &tmp, &dummy) != 1) {
+  // Starting sector for carrier device
+  status = convertStringToSector_t(&(carrier->start), argv[4]);
+  if (status) {
     ti->error = "dm-matryoshka: Invalid carrier device sector";
     goto bad;
   }
-  carrier -> start = tmp;
-  context -> carrier = carrier;
 
-  if (sscanf(argv[6], "%llu%c", &tmp, &dummy) != 1) {
+  // Starting sector for entropy device
+  status = convertStringToSector_t(&(entropy->start), argv[6]);
+  if (status) {
     ti->error = "dm-matryoshka: Invalid entropy device sector";
     goto bad;
   }
-  entropy -> start = tmp;
+
+  // Assign devices to context
+  context -> carrier = carrier;
   context -> entropy = entropy;
 
-  vfat_get_header(vfat, carrier -> dev, carrier -> start);
-  context -> fs = vfat;
+  // Parse FS type
+  context -> carrier_fs = get_carrier_fs(argv[7]);
+  fat_get_header(fat, carrier -> dev, carrier -> start);
+  context -> fs = fat;
 
-  context -> num_carrier = 1;
-  context -> num_entropy = 1;
-  context -> num_userdata = 1;
-
+  // Target config
   ti -> num_flush_bios = 1;
   ti -> num_discard_bios = 1;
   ti -> num_write_same_bios = 1;
 
-  ti -> private = context;
-
   /* Initilize kmatryoshkad thread: */
   context -> matryoshka_wq = create_singlethread_workqueue("kmatryoshkad");
   if (!context -> matryoshka_wq) {
-      DMERR("Couldn't start kxord");
+      DMERR("Couldn't start kmatryoshkad");
       ret1 = ret2 = -ENOMEM;
+      goto bad;
   }
   INIT_WORK(&context -> matryoshka_work, kmatryoshkad_do);
+
+  // Target private data has context
+  ti -> private = context;
 
   printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", context -> passphrase);
   printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
@@ -231,7 +234,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     kfree(context);
     kfree(carrier);
     kfree(entropy);
-    kfree(vfat);
+    kfree(fat);
     return ret1 && ret2;
 }
 
@@ -239,7 +242,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
   struct matryoshka_context *context = (struct matryoshka_context*) ti -> private;
   struct matryoshka_device *carrier = (struct matryoshka_device*) context -> carrier;
   struct matryoshka_device *entropy = (struct matryoshka_device*) context -> entropy;
-  struct fs_vfat *vfat = (struct fs_vfat*) context -> fs;
+  struct fs_fat *fat = (struct fs_fat*) context -> fs;
 
   flush_workqueue(context->matryoshka_wq);
   flush_scheduled_work();
@@ -251,7 +254,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
   kfree(context);
   kfree(carrier);
   kfree(entropy);
-  kfree(vfat);
+  kfree(fat);
 }
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {

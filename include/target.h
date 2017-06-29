@@ -32,12 +32,14 @@ struct matryoshka_context {
   struct workqueue_struct *matryoshka_wq;
   struct work_struct matryoshka_work;
 
-  struct fs_vfat *fs;
+  struct fs_fat *fs;
 
   u8 num_carrier; // m
   u8 num_entropy; // k
   struct matryoshka_device *carrier;
   struct matryoshka_device *entropy;
+
+  struct bio_list bios;
 };
 
 struct io {
