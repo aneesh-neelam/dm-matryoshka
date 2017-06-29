@@ -8,6 +8,7 @@
 #include "../lib/jerasure/cauchy.h"
 #include "../lib/jerasure/liberation.h"
 
+
 int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
   // TODO link with a C erasure library
 
