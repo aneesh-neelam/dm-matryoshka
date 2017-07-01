@@ -11,6 +11,8 @@
 
 int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
   // TODO link with a C erasure library
+  matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
+  jerasure_matrix_encode(k, m, w, matrix, data, coding, blocksize);
 
   return 0;
 }
