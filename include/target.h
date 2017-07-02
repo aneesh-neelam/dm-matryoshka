@@ -33,6 +33,7 @@ struct matryoshka_context {
   struct work_struct matryoshka_work;
 
   struct fs_fat *fs;
+  char* fs_name;
 
   u8 num_carrier; // m
   u8 num_entropy; // k

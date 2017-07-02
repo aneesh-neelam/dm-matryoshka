@@ -86,5 +86,6 @@ int fat_parse_header(struct fs_fat*, char*, int);
 int fat_compute_values(struct fs_fat*);
 int fat_is_cluster_used(struct fs_fat *,unsigned int);
 int read_page(struct block_device *, sector_t, int, struct page *);
+char* get_fat_type_name(struct fs_fat*);
 
 #endif /* FS_FAT_H */

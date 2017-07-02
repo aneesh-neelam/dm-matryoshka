@@ -233,12 +233,20 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   // Target private data has context
   ti->private = context;
 
-  printk(KERN_DEBUG "dm-matryoshka passphrase: %s: ", context->passphrase);
-  printk(KERN_DEBUG "dm-matryoshka carrier device: %s: ", argv[1]);
-  printk(KERN_DEBUG "dm-matryoshka carrier device starting sector: %lu: ", context->carrier->start);
-  printk(KERN_DEBUG "dm-matryoshka entropy device: %s: ", argv[3]);
-  printk(KERN_DEBUG "dm-matryoshka entropy device starting sector: %lu: ", context->entropy->start);
-  printk(KERN_DEBUG "dm-matryoshka carrier filesystem type: %x: ", context->carrier_fs);
+  if (context->carrier_fs == FS_FAT) {
+    context->fs_name = get_fat_type_name(fat)
+  } else {
+    context->fs_name = get_fs_name(context->carrier_fs);
+  }
+
+  printk(KERN_DEBUG "dm-matryoshka: Passphrase: %s: ", context->passphrase);
+  printk(KERN_DEBUG "dm-matryoshka: Number of carrier blocks per IO: %s: ", context->num_carrier);
+  printk(KERN_DEBUG "dm-matryoshka: Number of entropy blocks per IO: %s: ", context->num_entropy);
+  printk(KERN_DEBUG "dm-matryoshka: Carrier device: %s: ", argv[3]);
+  printk(KERN_DEBUG "dm-matryoshka: Carrier device starting sector: %lu: ", context->carrier->start);
+  printk(KERN_DEBUG "dm-matryoshka: entropy device: %s: ", argv[5]);
+  printk(KERN_DEBUG "dm-matryoshka: Entropy device starting sector: %lu: ", context->entropy->start);
+  printk(KERN_DEBUG "dm-matryoshka: Carrier filesystem type: %x: ", context->carrier_fs_name);
 
   return 0;
 

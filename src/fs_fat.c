@@ -1,6 +1,7 @@
 #include <linux/gfp.h>
 
 #include "../include/target.h"
+#include "../include/fs.h"
 #include "../include/fs_fat.h"
 
 
@@ -146,5 +147,13 @@ int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {
         return next;
       }
     }
+  }
+}
+
+char* get_fat_type(struct fs_fat *fat) {
+  if (fat->bits == 32) {
+    return FS_FAT32_NAME;
+  } else {
+    return FS_FAT16_NAME
   }
 }
