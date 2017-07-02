@@ -150,10 +150,10 @@ int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {
   }
 }
 
-char* get_fat_type(struct fs_fat *fat) {
+char* get_fat_type_name(struct fs_fat *fat) {
   if (fat->bits == 32) {
     return FS_FAT32_NAME;
   } else {
-    return FS_FAT16_NAME
+    return FS_FAT16_NAME;
   }
 }

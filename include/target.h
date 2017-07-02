@@ -28,12 +28,12 @@ struct matryoshka_context {
 
   char *passphrase;
   u8 carrier_fs;
+  char *carrier_fs_name;
 
   struct workqueue_struct *matryoshka_wq;
   struct work_struct matryoshka_work;
 
   struct fs_fat *fs;
-  char* fs_name;
 
   u8 num_carrier; // m
   u8 num_entropy; // k

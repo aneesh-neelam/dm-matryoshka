@@ -27,15 +27,15 @@ char* get_fs_name(u8 fs_type) {
     case FS_FAT: 
       return FS_FAT_NAME;
     case FS_EXFAT:
-      return FS_NAME_EXFAT;
+      return FS_EXFAT_NAME;
     case FS_EXT4: 
-      return FS_NAME_EXT4;
+      return FS_EXT4_NAME;
     case FS_BTRFS: 
-      return FS_NAME_BTRFS;
+      return FS_BTRFS_NAME;
     case FS_NTFS: 
-      return FS_NAME_NTFS;
+      return FS_NTFS_NAME;
     case FS_ZFS: 
-      return FS_NAME_ZFS;
+      return FS_ZFS_NAME;
     default: 
       return FS_UNKNOWN_NAME;
   }
