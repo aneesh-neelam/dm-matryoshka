@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-mkfs.vfat /dev/mapper/mydev
+mkfs.fat /dev/mapper/mydev
