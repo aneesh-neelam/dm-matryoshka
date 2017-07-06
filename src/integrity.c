@@ -1,5 +1,5 @@
 #include <linux/crc32.h>
-#include <kernel/types.h>
+#include <linux/types.h>
 
 #include "../include/integrity.h"
 

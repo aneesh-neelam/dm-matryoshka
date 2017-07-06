@@ -22,7 +22,7 @@ int read_page(struct block_device *device, sector_t sector, int size, struct pag
 }
 
 int fat_get_header(struct fs_fat *fat, struct dm_dev *carrier, sector_t start) {
-  int status, i;
+  int status;
 
   sector_t fat_header_sector;
   struct page *fat_page;
@@ -49,29 +49,29 @@ int fat_get_header(struct fs_fat *fat, struct dm_dev *carrier, sector_t start) {
 }
 
 int fat_parse_header(struct fs_fat *fat, char *buffer, int buffersize) {
-  fat -> bytesPerSector = FAT_READ_SHORT(buffer, FAT_BYTES_PER_SECTOR) & 0xffff;
+  fat -> bytesPerSector = (FAT_READ_SHORT(buffer, FAT_BYTES_PER_SECTOR)) & (0xffff);
   fat -> sectorsPerCluster = buffer[FAT_SECTORS_PER_CLUSTER] & 0xff;
-  fat -> reservedSectors = FAT_READ_SHORT(buffer, FAT_RESERVED_SECTORS) & 0xffff;
+  fat -> reservedSectors = (FAT_READ_SHORT(buffer, FAT_RESERVED_SECTORS)) & (0xffff);
   fat -> fats = buffer[FAT_FATS];
 
-  fat -> sectorsPerFat = FAT_READ_SHORT(buffer, FAT16_SECTORS_PER_FAT) & 0xffff;
+  fat -> sectorsPerFat = (FAT_READ_SHORT(buffer, FAT16_SECTORS_PER_FAT)) & (0xffff);
 
   if (fat -> sectorsPerFat != 0) {
     fat -> type = FAT16;
     fat -> bits = 16;
-    fat -> rootEntries = FAT_READ_SHORT(buffer, FAT16_ROOT_ENTRIES) & 0xffff;
+    fat -> rootEntries = (FAT_READ_SHORT(buffer, FAT16_ROOT_ENTRIES)) & (0xffff);
     fat -> rootDirectory = 0;
 
-    fat -> totalSectors = FAT_READ_SHORT(buffer, FAT16_TOTAL_SECTORS) & 0xffff;
+    fat -> totalSectors = (FAT_READ_SHORT(buffer, FAT16_TOTAL_SECTORS)) & (0xffff);
     if (!fat -> totalSectors) {
-      fat -> totalSectors = FAT_READ_LONG(buffer, FAT_TOTAL_SECTORS) & 0xffffffff;
+      fat -> totalSectors = (FAT_READ_LONG(buffer, FAT_TOTAL_SECTORS)) & (0xffffffff);
     }
   } else {
     fat -> type = FAT32;
     fat -> bits = 32;
-    fat -> sectorsPerFat = FAT_READ_LONG(buffer, FAT_SECTORS_PER_FAT) & 0xffffffff;
-    fat -> totalSectors = FAT_READ_LONG(buffer, FAT_TOTAL_SECTORS) & 0xffffffff;
-    fat -> rootDirectory = FAT_READ_LONG(buffer, FAT_ROOT_DIRECTORY) & 0xffffffff;
+    fat -> sectorsPerFat = (FAT_READ_LONG(buffer, FAT_SECTORS_PER_FAT)) & (0xffffffff);
+    fat -> totalSectors = (FAT_READ_LONG(buffer, FAT_TOTAL_SECTORS)) & (0xffffffff);
+    fat -> rootDirectory = (FAT_READ_LONG(buffer, FAT_ROOT_DIRECTORY)) & (0xffffffff);
   }
 
   return 0;
@@ -106,7 +106,6 @@ int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {
   char *buffer;
   unsigned int next;
   int status;
-  int bytes = (fat -> bits == 32 ? 4 : 2);
 
   sector_t sector = (fat -> fatStart + fat -> fatSize * fat_type + (fat -> bits * cluster) / 8) >> SECTOR_SHIFT;
   struct page *fat_page = alloc_page(GFP_KERNEL);
@@ -119,7 +118,7 @@ int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {
   buffer = (char*) page_address(fat_page);
 
   if (fat -> type == FAT32) {
-    next = FAT_READ_LONG(buffer, 0)&0x0fffffff;
+    next = (FAT_READ_LONG(buffer, 0)) & (0x0fffffff);
 
     if (next >= 0x0ffffff0) {
         return FAT_LAST;
@@ -127,7 +126,7 @@ int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {
         return next;
     }
   } else {
-    next = FAT_READ_SHORT(buffer,0)&0xffff;
+    next = (FAT_READ_SHORT(buffer,0)) & (0xffff);
 
     if (fat -> bits == 12) {
       int bit = cluster * fat -> bits;
