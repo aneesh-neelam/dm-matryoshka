@@ -17,61 +17,6 @@
 #include "../include/workqueue.h"
 
 
-struct bio *mybio_clone(struct bio *sbio)
-{
-    struct bio *bio = bio_kmalloc(GFP_NOIO, sbio->bi_max_vecs);
-    struct bio_vec *bvec, *sbvec;
-    unsigned short i;
-
-    if (!bio)
-        return NULL;
-
-    memcpy(bio->bi_io_vec, sbio->bi_io_vec,
-           sbio->bi_max_vecs * sizeof(struct bio_vec));
-
-    for (i = 0, bvec = bio->bi_io_vec, sbvec = sbio->bi_io_vec;
-         i < bio->bi_max_vecs; i++, bvec++, sbvec++) {
-        bvec->bv_page = alloc_page(GFP_NOIO);
-        if (!bvec->bv_page)
-            goto mybio_clone_cleanup;
-
-        bvec->bv_offset = sbvec->bv_offset;
-        bvec->bv_len = sbvec->bv_len;
-    }
-
-    bio->bi_iter.bi_sector = sbio->bi_iter.bi_sector;
-    bio->bi_opf = sbio->bi_opf;
-    bio->bi_vcnt = sbio->bi_vcnt;
-    bio->bi_iter.bi_size = sbio->bi_iter.bi_size;
-    bio->bi_iter.bi_idx = 0;
-    return bio;
-
-mybio_clone_cleanup:
-    while (i--) {
-        bvec--;
-        __free_page(bvec->bv_page);
-    }
-    return NULL;
-}
-
-struct bio *custom_bio_clone(struct bio *sbio) {
-  struct bio *bio = bio_alloc(GFP_NOIO, bio_segments(sbio));
-  struct bio_vec bv;
-  struct bvec_iter iter;
-  struct page *page;
-
-  bio_for_each_segment(bv, sbio, iter) {
-		page = alloc_page(GFP_KERNEL);
-    bio_add_page(bio, page, bv.bv_len, bv.bv_offset);
-	}
-
-  if (sbio->bi_next != NULL) {
-    bio->bi_next = custom_bio_clone(sbio->bi_next);
-  }
-
-  return bio;
-}
-
 /*
  * Construct a matryoshka mapping: <passphrase> entropy_dev_path> <carrier_dev_path>
  */
@@ -183,13 +128,20 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   // Parse FS type
   context->carrier_fs = get_carrier_fs(argv[7]);
-  status = fat_get_header(fat, carrier->dev, carrier->start);
-  if (status) {
-    ti->error = "dm-matryoshka: Error parsing carrier file system";
-    status = -EIO;
-    goto bad;
+  if (context->carrier_fs == FS_FAT) {
+    status = fat_get_header(fat, carrier->dev, carrier->start);
+    if (status) {
+      ti->error = "dm-matryoshka: Error parsing FAT file system on carrier device";
+      status = -EIO;
+      goto bad;
+    }
+    context->cluster_count = fat->totalClusters;
+    context->cluster_size = fat->bytesPerCluster;
+    context->fs = fat;
+  } else {
+    status = -EINVAL;
+    ti->error = "dm-matryoshka: Specified file system not supported on carrier device";
   }
-  context->fs = fat;
 
   // Get FS name from type
   if (context->carrier_fs == FS_FAT) {

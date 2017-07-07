@@ -29,8 +29,8 @@ struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
         goto kmatryoshkad_init_bios_cleanup;
 
     for (i = 0; i < count; i++) {
-        /* Clone the BIO for a specific xor device: */
-        bios[i] = mybio_clone(src);
+        /* Clone the BIO for a specific device: */
+        bios[i] = bio_clone(src, GFP_NOIO);
         if (!bios[i])
             goto kmatryoshkad_init_bios_cleanup_bios;
     }
@@ -74,8 +74,6 @@ static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio
 
 void kmatryoshkad_do(struct work_struct *work) {
   struct matryoshka_context *mc = container_of(work, struct matryoshka_context, matryoshka_work);
-
-  printk(KERN_DEBUG "kmatryoshkad_do");
 
   struct bio_list bios;
   struct bio *bio;

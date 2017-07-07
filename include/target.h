@@ -3,6 +3,7 @@
 
 #include <linux/types.h>
 #include <linux/device-mapper.h>
+#include <linux/mutex.h>
 
 #include "fs.h"
 
@@ -25,7 +26,6 @@ struct matryoshka_device {
 
 struct matryoshka_context {
   spinlock_t lock;
-
   char *passphrase;
   u8 carrier_fs;
   char *carrier_fs_name;
@@ -34,6 +34,9 @@ struct matryoshka_context {
   struct work_struct matryoshka_work;
 
   struct fs_fat *fs;
+
+  __kernel_size_t cluster_size;
+  u32 cluster_count;
 
   u8 num_carrier; // m
   u8 num_entropy; // k
@@ -44,17 +47,14 @@ struct matryoshka_context {
 };
 
 struct io {
+  struct matryoshka_context *mc;
+
   struct bio bio;
   struct bio_list entropy_bios;
   struct bio_list carrier_bios;
+
+  u8 carrier_done;
+  u8 entropy_done;
 };
-
-
-int get_entropy_blocks(struct dm_dev*);
-
-int matryoshka_read(struct dm_target*, struct bio*);
-int matryoshka_write(struct dm_target*, struct bio*);
-
-struct bio *mybio_clone(struct bio *);
 
 #endif /* TARGET_H */
