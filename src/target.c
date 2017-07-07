@@ -141,6 +141,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   } else {
     status = -EINVAL;
     ti->error = "dm-matryoshka: Specified file system not supported on carrier device";
+    goto bad;
   }
 
   // Get FS name from type
