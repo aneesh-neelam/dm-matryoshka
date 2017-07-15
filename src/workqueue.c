@@ -9,40 +9,18 @@ void wakeup_kmatryoshkad(struct matryoshka_context *context) {
 }
 
 void kmatryoshkad_queue_bio(struct matryoshka_context *context, struct bio *bio) {
-    unsigned long flags;
-    int should_wake = 0; /* Whether kmatryoshkad should be waken up. */
+    int should_wake = 0; // Whether kmatryoshkad should be waken up
 
-    spin_lock_irqsave(&context->lock, flags);
+    mutex_lock(&(context->lock));
+
     should_wake = !(context->bios.head);
-    bio_list_add(&context->bios, bio);
-    spin_unlock_irqrestore(&context->lock, flags);
+    bio_list_add(&(context->bios), bio);
 
-    if (should_wake)
-        wakeup_kmatryoshkad(context);
-}
+    mutex_unlock(&(context->lock));
 
-struct bio **kmatryoshkad_init_bios(struct bio *src, unsigned int count) {
-    struct bio **bios = kmalloc(count * sizeof(struct bio*), GFP_NOIO);
-    unsigned i;
-
-    if (!bios)
-        goto kmatryoshkad_init_bios_cleanup;
-
-    for (i = 0; i < count; i++) {
-        /* Clone the BIO for a specific device: */
-        bios[i] = bio_clone(src, GFP_NOIO);
-        if (!bios[i])
-            goto kmatryoshkad_init_bios_cleanup_bios;
+    if (should_wake) {
+      wakeup_kmatryoshkad(context);
     }
-    return bios;
-
-    kmatryoshkad_init_bios_cleanup_bios:
-      while (i--)
-        bio_put(bios[i]);
-
-    kfree(bios);
-    kmatryoshkad_init_bios_cleanup:
-      return NULL;
 }
 
 void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
@@ -73,21 +51,22 @@ static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio
 }
 
 void kmatryoshkad_do(struct work_struct *work) {
-  struct matryoshka_context *mc = container_of(work, struct matryoshka_context, matryoshka_work);
+  struct matryoshka_context *context = container_of(work, struct matryoshka_context, matryoshka_work);
 
   struct bio_list bios;
   struct bio *bio;
-  unsigned long flags;
 
-  spin_lock_irqsave(&mc->lock, flags);
-  bios = mc->bios;
-  bio_list_init(&mc->bios);
-  spin_unlock_irqrestore(&mc->lock, flags);
+  mutex_lock(&(context->lock));
+
+  bios = context->bios;
+  bio_list_init(&context->bios);
+
+  mutex_unlock(&(context->lock));
 
   while ((bio = bio_list_pop(&bios))) {
       if (bio_data_dir(bio) == READ)
-          kmatryoshkad_do_read(mc, bio);
+          kmatryoshkad_do_read(context, bio);
       else
-          kmatryoshkad_do_write(mc, bio);
+          kmatryoshkad_do_write(context, bio);
   }
 }

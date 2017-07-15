@@ -46,7 +46,10 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     return -ENOMEM;
   }
 
-    /* Initilize kmatryoshkad thread: */
+  // Initilize the mutex(es)
+  mutex_init(&(context->lock));
+
+  // Initilize kmatryoshkad thread
   context->matryoshka_wq = create_singlethread_workqueue("kmatryoshkad");
   if (!context->matryoshka_wq) {
       DMERR("Couldn't start kmatryoshkad");
