@@ -38,6 +38,8 @@ static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio)
   kmatryoshkad_init_dev_bio(bio, mc -> carrier, bio -> bi_private, kmatryoshkad_end_read);
 
   submit_bio(bio);
+
+  printk(KERN_DEBUG "Submitted read bio in kmatryoshkad");
 }
 
 static void kmatryoshkad_end_write(struct bio *bio) {
@@ -48,6 +50,8 @@ static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio
   kmatryoshkad_init_dev_bio(bio, mc -> carrier, bio -> bi_private, kmatryoshkad_end_write);
 
   submit_bio(bio);
+
+  printk(KERN_DEBUG "Submitted write bio in kmatryoshkad");
 }
 
 void kmatryoshkad_do(struct work_struct *work) {
