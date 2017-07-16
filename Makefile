@@ -15,7 +15,7 @@ PUBLICKEYFILE = /home/aneeshneelam/.uefi-sb/sb_pub.der
 module = dm-matryoshka
 
 # SRC and LIB files
-SRCOBJS = ./src/integrity.o ./src/utility.o ./src/fs.o ./src/entropy.o ./src/erasure.o ./src/fs_fat.o ./src/workqueue.o ./src/xor.o ./src/target.o ./src/read.o ./src/write.o
+SRCOBJS = ./src/integrity.o ./src/utility.o ./src/fs.o ./src/entropy.o ./src/erasure.o ./src/fs_fat.o ./src/workqueue.o ./src/xor.o ./src/target.o
 LIBOBJS = ./lib/jerasure/cauchy.o ./lib/jerasure/galois.o ./lib/jerasure/jerasure.o ./lib/jerasure/liberation.o ./lib/jerasure/reed_sol.o
 
 # KBUILD Flags
