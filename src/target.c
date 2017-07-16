@@ -204,15 +204,7 @@ static void matryoshka_dtr(struct dm_target *ti) {
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti->private;
 
-  // kmatryoshkad_queue_bio(mc, bio);
-
-  // The following is a test for bio_submit
-  bio->bi_bdev = mc->carrier->dev->bdev;
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = mc->carrier->start + dm_target_offset(ti, bio->bi_iter.bi_sector);
-  }
-  submit_bio(bio);
-  // End Test
+  kmatryoshkad_queue_bio(mc, bio);
 
   return DM_MAPIO_SUBMITTED;
 }

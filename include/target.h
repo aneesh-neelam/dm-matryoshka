@@ -47,14 +47,18 @@ struct matryoshka_context {
 };
 
 struct io {
+  struct mutex lock;
+
   struct matryoshka_context *mc;
 
-  struct bio bio;
+  struct bio original_bio;
   struct bio_list entropy_bios;
   struct bio_list carrier_bios;
 
   u8 carrier_done;
   u8 entropy_done;
+
+  int error;
 };
 
 #endif /* TARGET_H */

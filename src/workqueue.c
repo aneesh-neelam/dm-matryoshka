@@ -26,8 +26,8 @@ void kmatryoshkad_queue_bio(struct matryoshka_context *context, struct bio *bio)
 void kmatryoshkad_init_dev_bio(struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
     bio->bi_bdev = d->dev->bdev;
     bio->bi_iter.bi_sector += d->start;
-    bio->bi_private = io;
-    bio->bi_end_io = ep;
+    // bio->bi_private = io;
+    // bio->bi_end_io = ep;
 }
 
 static void kmatryoshkad_end_read(struct bio *bio) {
