@@ -26,6 +26,9 @@ struct matryoshka_device {
 
 struct matryoshka_context {
   struct mutex lock;
+
+  struct dm_target *ti;
+
   char *passphrase;
   u8 carrier_fs;
   char *carrier_fs_name;

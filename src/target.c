@@ -156,10 +156,11 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
 
   // Target config
   ti->num_flush_bios = 1;
-  ti->num_discard_bios = 1;
+  ti->num_discard_bios = 0;
   ti->num_write_same_bios = 1;
 
   // Target private data has context
+  context->ti = ti;
   ti->private = context;
 
   printk(KERN_DEBUG "dm-matryoshka: Passphrase: %s: ", context->passphrase);
