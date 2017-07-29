@@ -39,7 +39,9 @@ struct matryoshka_context {
   struct fs_fat *fs;
 
   __kernel_size_t cluster_size;
+  __kernel_size_t sector_size;
   u32 cluster_count;
+  u32 sectors_per_cluster;
 
   u8 num_carrier; // m
   u8 num_entropy; // k

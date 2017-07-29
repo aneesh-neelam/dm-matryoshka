@@ -140,6 +140,8 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     }
     context->cluster_count = fat->totalClusters;
     context->cluster_size = fat->bytesPerCluster;
+    context->sector_size = fat->bytesPerSector;
+    context->sectors_per_cluster = fat->sectorsPerCluster;
     context->fs = fat;
   } else {
     status = -EINVAL;
@@ -202,12 +204,31 @@ static void matryoshka_dtr(struct dm_target *ti) {
   kfree(fat);
 }
 
+void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
+  bio->bi_bdev = d->dev->bdev;
+}
+
+void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matryoshka_device *d) {
+  if (bio_sectors(bio)) {
+    bio->bi_iter.bi_sector = d->start + dm_target_offset(mc->ti, bio->bi_iter.bi_sector);
+  }
+}
+
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti->private;
 
-  kmatryoshkad_queue_bio(mc, bio);
+  // Split bio if larger than size of cluster
+  dm_accept_partial_bio(bio, mc->sectors_per_cluster);
 
+  bio_map_dev(bio, mc->carrier);
+  bio_map_sector(bio, mc, mc->carrier);
+
+  submit_bio(bio);
   return DM_MAPIO_SUBMITTED;
+
+  //kmatryoshkad_queue_bio(mc, bio);
+
+  //return DM_MAPIO_SUBMITTED;
 }
 
 static struct target_type matryoshka_target = {
