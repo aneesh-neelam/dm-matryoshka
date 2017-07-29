@@ -69,3 +69,6 @@ dm-matryoshka.pro.user
 .project
 .cproject
 .settings
+
+# VScode
+.vscode/

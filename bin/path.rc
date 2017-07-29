@@ -1,0 +1,2 @@
+SCRIPTPATH=/home/aneeshneelam/Developer/dm-matryoshka/bin
+export PATH=$PATH:$SCRIPTPATH
