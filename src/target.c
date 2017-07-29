@@ -218,7 +218,9 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti->private;
 
   // Split bio if larger than size of cluster
-  dm_accept_partial_bio(bio, mc->sectors_per_cluster);
+  if (bio_sectors(bio) > mc->sectors_per_cluster) {
+    dm_accept_partial_bio(bio, mc->sectors_per_cluster);
+  }
 
   bio_map_dev(bio, mc->carrier);
   bio_map_sector(bio, mc, mc->carrier);
