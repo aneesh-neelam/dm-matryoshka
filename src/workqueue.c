@@ -6,26 +6,14 @@
 #include "../include/target.h"
 
 
-void wakeup_kmatryoshkad(struct matryoshka_context *context) {
-  queue_work(context -> matryoshka_wq, &context -> matryoshka_work);
+void kmatryoshkad_queue_io(struct matryoshka_io *io) {
+  struct matryoshka_context *mc = io->mc;
+
+  INIT_WORK(&io->work, kmatryoshkad_do);
+  queue_work(mc->matryoshka_wq, &io->work);
 }
 
-void kmatryoshkad_queue_bio(struct matryoshka_context *context, struct bio *bio) {
-  int should_wake = 0; // Whether kmatryoshkad should be waken up
-
-  mutex_lock(&context->lock);
-
-  should_wake = !(context->bios.head);
-  bio_list_add(&context->bios, bio);
-
-  mutex_unlock(&context->lock);
-
-  if (should_wake) {
-    wakeup_kmatryoshkad(context);
-  }
-}
-
-void kmatryoshkad_init_dev_bio(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct io *io, bio_end_io_t ep) {
+void kmatryoshkad_init_dev_bio(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
   bio->bi_bdev = d->dev->bdev;
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = d->start + dm_target_offset(mc->ti, bio->bi_iter.bi_sector);
@@ -38,10 +26,11 @@ static void kmatryoshkad_end_read(struct bio *bio) {
   bio_endio(bio);
 }
 
-static void kmatryoshkad_do_read(struct matryoshka_context *mc, struct bio *bio) {
-  kmatryoshkad_init_dev_bio(mc, bio, mc -> carrier, bio -> bi_private, kmatryoshkad_end_read);
+static void kmatryoshkad_do_read(struct matryoshka_io *io) {
+  struct matryoshka_context *mc = io->mc;
+  kmatryoshkad_init_dev_bio(mc, io->base_bio, mc -> carrier, io, kmatryoshkad_end_read);
 
-  generic_make_request(bio);
+  generic_make_request(io->base_bio);
 
   printk(KERN_DEBUG "Submitted read bio in kmatryoshkad");
 }
@@ -50,32 +39,21 @@ static void kmatryoshkad_end_write(struct bio *bio) {
   bio_endio(bio);
 }
 
-static void kmatryoshkad_do_write(struct matryoshka_context *mc, struct bio *bio) {
-  kmatryoshkad_init_dev_bio(mc, bio, mc -> carrier, bio -> bi_private, kmatryoshkad_end_write);
+static void kmatryoshkad_do_write(struct matryoshka_io *io) {
+  struct matryoshka_context *mc = io->mc;
+  kmatryoshkad_init_dev_bio(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
 
-  generic_make_request(bio);
+  generic_make_request(io->base_bio);
 
   printk(KERN_DEBUG "Submitted write bio in kmatryoshkad");
 }
 
 void kmatryoshkad_do(struct work_struct *work) {
-  struct matryoshka_context *context = container_of(work, struct matryoshka_context, matryoshka_work);
+  struct matryoshka_io *io = container_of(work, struct matryoshka_io, work);
 
-  struct bio_list bios;
-  struct bio *bio;
-
-  mutex_lock(&context->lock);
-
-  bios = context->bios;
-  bio_list_init(&context->bios);
-
-  mutex_unlock(&context->lock);
-
-  while ((bio = bio_list_pop(&bios))) {
-    if (bio_data_dir(bio) == READ) {
-      kmatryoshkad_do_read(context, bio);
-    } else {
-      kmatryoshkad_do_write(context, bio);
-    }
+  if (bio_data_dir(io->base_bio) == READ) {
+    kmatryoshkad_do_read(io);
+  } else {
+    kmatryoshkad_do_write(io);
   }
 }

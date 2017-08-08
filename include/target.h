@@ -34,7 +34,6 @@ struct matryoshka_context {
   char *carrier_fs_name;
 
   struct workqueue_struct *matryoshka_wq;
-  struct work_struct matryoshka_work;
 
   struct fs_fat *fs;
 
@@ -51,12 +50,15 @@ struct matryoshka_context {
   struct bio_list bios;
 };
 
-struct io {
-  struct mutex lock;
-
+struct matryoshka_io {
   struct matryoshka_context *mc;
 
-  struct bio original_bio;
+  struct bio *base_bio;
+
+  struct work_struct work;
+
+  struct mutex lock;
+
   struct bio_list entropy_bios;
   struct bio_list carrier_bios;
 

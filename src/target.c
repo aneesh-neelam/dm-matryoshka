@@ -50,13 +50,12 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   mutex_init(&(context->lock));
 
   // Initilize kmatryoshkad thread
-  context->matryoshka_wq = create_singlethread_workqueue("kmatryoshkad");
+  context->matryoshka_wq = alloc_workqueue("kmatryoshkad", WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, 1);
   if (!context->matryoshka_wq) {
       DMERR("Couldn't start kmatryoshkad");
       status = -ENOMEM;
       goto bad;
   }
-  INIT_WORK(&context->matryoshka_work, kmatryoshkad_do);
 
   // Parse passphrase from arguments
   str_len = strlen(argv[0]);
@@ -216,21 +215,28 @@ void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matry
 
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti->private;
+  struct matryoshka_io *io;
 
   // Split bio if larger than size of cluster
   if (bio_sectors(bio) > mc->sectors_per_cluster) {
     dm_accept_partial_bio(bio, mc->sectors_per_cluster);
   }
 
+  /*
   bio_map_dev(bio, mc->carrier);
   bio_map_sector(bio, mc, mc->carrier);
 
   submit_bio(bio);
   return DM_MAPIO_SUBMITTED;
+  */
+  io = kmalloc(sizeof(struct matryoshka_io), GFP_KERNEL);
 
-  //kmatryoshkad_queue_bio(mc, bio);
+  io->mc = mc;
+  io->base_bio = bio;
 
-  //return DM_MAPIO_SUBMITTED;
+  kmatryoshkad_queue_io(io);
+
+  return DM_MAPIO_SUBMITTED;
 }
 
 static struct target_type matryoshka_target = {
