@@ -20,7 +20,7 @@ static void kmatryoshkad_end_read(struct bio *bio) {
 
 static void kmatryoshkad_do_read(struct matryoshka_io *io) {
   struct matryoshka_context *mc = io->mc;
-  kmatryoshkad_init_dev_bio(mc, io->base_bio, mc -> carrier, io, kmatryoshkad_end_read);
+  mybio_init_dev(mc, io->base_bio, mc -> carrier, io, kmatryoshkad_end_read);
 
   generic_make_request(io->base_bio);
 }
@@ -31,7 +31,7 @@ static void kmatryoshkad_end_write(struct bio *bio) {
 
 static void kmatryoshkad_do_write(struct matryoshka_io *io) {
   struct matryoshka_context *mc = io->mc;
-  kmatryoshkad_init_dev_bio(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
+  mybio_init_dev(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
 
   generic_make_request(io->base_bio);
 }

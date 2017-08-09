@@ -169,7 +169,7 @@ void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matry
   }
 }
 
-void init_bio_dev(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
+void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
   bio_map_dev(bio, d);
   bio_map_sector(bio, mc, d);
   // bio->bi_private = io;
