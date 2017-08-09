@@ -203,16 +203,6 @@ static void matryoshka_dtr(struct dm_target *ti) {
   kfree(fat);
 }
 
-void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
-  bio->bi_bdev = d->dev->bdev;
-}
-
-void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matryoshka_device *d) {
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = d->start + dm_target_offset(mc->ti, bio->bi_iter.bi_sector);
-  }
-}
-
 static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   struct matryoshka_context *mc = (struct matryoshka_context*) ti->private;
   struct matryoshka_io *io;
