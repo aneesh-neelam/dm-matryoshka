@@ -15,25 +15,109 @@ void kmatryoshkad_queue_io(struct matryoshka_io *io) {
 }
 
 static void kmatryoshkad_end_read(struct bio *bio) {
-  bio_endio(bio);
+  struct matryoshka_io *io = bio->bi_private;
+
+  mutex_lock(&(io->lock));
+  if (error) {
+    io_accumulate_error(io, error);
+    mutex_unlock(&(io->lock));
+  } else if (!bio_flagged(bio, BIO_UPTODATE)) {
+    io_accumulate_error(io, -EIO);
+    mutex_unlock(&(io->lock));
+  } else if (!io->error) {
+    if atomic_read(&(io->erasure_done) == 1) {
+      mutex_unlock(&(io->lock));
+  
+      mybio_free(bio);
+  
+      bio = io->base_bio;
+      bio->bi_error = io->error;
+  
+      kfree(io->carrier_bios);
+      kfree(io->entropy_bios);
+      kfree(io);
+  
+      bio_endio(bio);
+    } else if (1 > atomic_read(&(io->carrier_done)) {
+      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]);
+      atomic_inc(&(io->carrier_done));
+
+      mutex_unlock(&(io->lock));
+    } else {
+      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]);
+      atomic_inc(&(io->carrier_done));
+
+      mybio_xor_copy(io->carrier_bios[0], io->carrier_bios[1], io->base_bio);
+      atomic_inc(&(io->erasure_done));
+
+      mutex_unlock(&(io->lock));
+    }
+  }
 }
 
 static void kmatryoshkad_do_read(struct matryoshka_io *io) {
   struct matryoshka_context *mc = io->mc;
-  mybio_init_dev(mc, io->base_bio, mc -> carrier, io, kmatryoshkad_end_read);
 
-  generic_make_request(io->base_bio);
+  struct bio *carrier = mybio_clone(io->bsse_bio);
+  struct bio *entropy = mybio_clone(io->base_bio);
+
+  mybio_init_dev(mc, carrier, mc->carrier, io, kmatryoshkad_end_read);
+  mybio_init_dev(mc, entropy, mc->entropy, io, kmatryoshkad_end_read);
+
+  generic_make_request(carrier);
+  generic_make_request(entropy);
 }
 
 static void kmatryoshkad_end_write(struct bio *bio) {
-  bio_endio(bio);
+  struct matryoshka_io *io = bio->bi_private;
+  
+  mutex_lock(&(io->lock));
+  if (error) {
+    io_accumulate_error(io, error);
+    mutex_unlock(&(io->lock));
+  } else if (!bio_flagged(bio, BIO_UPTODATE)) {
+    io_accumulate_error(io, -EIO);
+    mutex_unlock(&(io->lock));
+  } else if (!io->error) {
+    if (1 == atomic_read(&(io->erasure_done)) {
+      mutex_unlock(&(io->lock));
+
+      mybio_free(bio);
+
+      bio = io->base_bio;
+      bio->bi_error = io->error;
+
+      kfree(io->carrier_bios);
+      kfree(io->entropy_bios);
+      kfree(io);
+  
+      bio_endio(bio);
+    }
+    else if (1 > atomic_read(&(io->entropy_done)) {
+      mybio_copy_data(bio, io->entropy_bios[atomic_read(&(io->entropy_done)]);
+      atomic_inc(&(io->entropy_done));
+
+      mybio_xor_assign(io->entropy_bios[0], io->base_bio);
+      atomic_inc(&(io->erasure_done));
+      
+      mutex_unlock(&(io->lock));
+      
+      generic_make_request(io->base_bio);
+    }
+  }
 }
 
 static void kmatryoshkad_do_write(struct matryoshka_io *io) {
   struct matryoshka_context *mc = io->mc;
-  mybio_init_dev(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
+  
+  // struct bio *carrier = mybio_clone(io->bsse_bio);
+  struct bio *entropy = mybio_clone(io->base_bio);
+  bio->bi_opf = REQ_OP_READ;
 
-  generic_make_request(io->base_bio);
+  // mybio_init_dev(mc, carrier, mc -> carrier, io, kmatryoshkad_end_read);
+  mybio_init_dev(mc, entropy, mc->entropy, io, kmatryoshkad_end_read);
+
+  generic_make_request(entropy);
 }
 
 void kmatryoshkad_do(struct work_struct *work) {

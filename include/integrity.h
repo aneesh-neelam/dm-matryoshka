@@ -5,6 +5,6 @@
 
 #define INIT_CRC 0
 
-u32 crc32le(const char *, __kernel_size_t);
+inline u32 crc32le(const char *, __kernel_size_t);
 
 #endif /* INTEGRITY_H */

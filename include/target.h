@@ -4,6 +4,7 @@
 #include <linux/types.h>
 #include <linux/device-mapper.h>
 #include <linux/mutex.h>
+#include <<asm/atomic.h>>
 
 #include "fs.h"
 
@@ -59,11 +60,12 @@ struct matryoshka_io {
 
   struct mutex lock;
 
-  struct bio_list entropy_bios;
-  struct bio_list carrier_bios;
+  struct bio **entropy_bios;
+  struct bio **carrier_bios;
 
-  u8 carrier_done;
-  u8 entropy_done;
+  atomic_t carrier_done;
+  atomic_t entropy_done;
+  atomic_t erasure_done;
 
   int error;
 };
