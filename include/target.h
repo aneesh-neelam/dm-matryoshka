@@ -4,7 +4,7 @@
 #include <linux/types.h>
 #include <linux/device-mapper.h>
 #include <linux/mutex.h>
-#include <<asm/atomic.h>>
+#include <asm/atomic.h>
 
 #include "fs.h"
 

@@ -1,6 +1,6 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
-#include <<asm/atomic.h>>
+#include <asm/atomic.h>
 
 #include "../include/target.h"
 #include "../include/utility.h"
@@ -150,13 +150,13 @@ void mybio_copy_data(struct bio *src, struct bio *dst) {
     for (i = 0, src_bvec = src->bi_io_vec, dst_bvec = dst->bi_io_vec; i < src->bi_vcnt; i++, src_bvec++, dst_bvec++) {
         BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
 
-        src_buf = __bio_kmap_atomic(src, i, KM_USER0);
-        dst_buf = __bio_kmap_atomic(dst, i, KM_USER0);
+        src_buf = __bio_kmap_atomic(src, i);
+        dst_buf = __bio_kmap_atomic(dst, i);
         memcpy(dst_buf + dst_bvec->bv_offset,
                src_buf + src_bvec->bv_offset,
                src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf, KM_USER0);
-        __bio_kunmap_atomic(src_buf, KM_USER0);
+        __bio_kunmap_atomic(dst_buf);
+        __bio_kunmap_atomic(src_buf);
     }
 }
 
@@ -230,13 +230,13 @@ void mybio_xor_assign(struct bio *src, struct bio *dst) {
     {
         BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
 
-        src_buf = __bio_kmap_atomic(src, i, KM_USER0);
-        dst_buf = __bio_kmap_atomic(dst, i, KM_USER0);
+        src_buf = __bio_kmap_atomic(src, i);
+        dst_buf = __bio_kmap_atomic(dst, i);
         xor_assign(src_buf + src_bvec->bv_offset,
                    dst_buf + dst_bvec->bv_offset,
                    src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf, KM_USER0);
-        __bio_kunmap_atomic(src_buf, KM_USER0);
+        __bio_kunmap_atomic(dst_buf);
+        __bio_kunmap_atomic(src_buf);
     }
 }
 
@@ -267,15 +267,15 @@ void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
         BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
         BUG_ON(src2_bvec->bv_len != dst_bvec->bv_len);
 
-        src_buf = __bio_kmap_atomic(src, i, KM_USER0);
-        src2_buf = __bio_kmap_atomic(src2, i, KM_USER0);
-        dst_buf = __bio_kmap_atomic(dst, i, KM_USER0);
+        src_buf = __bio_kmap_atomic(src, i);
+        src2_buf = __bio_kmap_atomic(src2, i);
+        dst_buf = __bio_kmap_atomic(dst, i);
         xor_copy(src_buf + src_bvec->bv_offset,
                  src2_buf + src2_bvec->bv_offset,
                  dst_buf + dst_bvec->bv_offset,
                  src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf, KM_USER0);
-        __bio_kunmap_atomic(src2_buf, KM_USER0);
-        __bio_kunmap_atomic(src_buf, KM_USER0);
+        __bio_kunmap_atomic(dst_buf);
+        __bio_kunmap_atomic(src2_buf);
+        __bio_kunmap_atomic(src_buf);
     }
 }
