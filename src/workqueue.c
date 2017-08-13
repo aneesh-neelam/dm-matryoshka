@@ -14,7 +14,7 @@ void kmatryoshkad_queue_io(struct matryoshka_io *io) {
   queue_work(mc->matryoshka_wq, &io->work);
 }
 
-static void kmatryoshkad_end_read(struct bio *bio, int error) {
+static void kmatryoshkad_end_read(struct bio *bio) {
   struct matryoshka_io *io = bio->bi_private;
 
   mutex_lock(&(io->lock));
@@ -22,7 +22,7 @@ static void kmatryoshkad_end_read(struct bio *bio, int error) {
     io_accumulate_error(io, error);
     mutex_unlock(&(io->lock));
   } else if (!io->error) {
-      if (1 == atomic_read(&(io->erasure_done)) {
+      if (1 == atomic_read(&(io->erasure_done))) {
         mutex_unlock(&(io->lock));
   
         mybio_free(bio);
@@ -65,7 +65,7 @@ static void kmatryoshkad_do_read(struct matryoshka_io *io) {
   generic_make_request(entropy);
 }
 
-static void kmatryoshkad_end_write(struct bio *bio, int error) {
+static void kmatryoshkad_end_write(struct bio *bio) {
   struct matryoshka_io *io = bio->bi_private;
   
   mutex_lock(&(io->lock));
@@ -94,6 +94,8 @@ static void kmatryoshkad_end_write(struct bio *bio, int error) {
       atomic_inc(&(io->erasure_done));
       
       mutex_unlock(&(io->lock));
+
+      mybio_init_dev(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
       
       generic_make_request(io->base_bio);
     }
@@ -108,7 +110,7 @@ static void kmatryoshkad_do_write(struct matryoshka_io *io) {
   bio->bi_opf = REQ_OP_READ;
 
   // mybio_init_dev(mc, carrier, mc -> carrier, io, kmatryoshkad_end_read);
-  mybio_init_dev(mc, entropy, mc->entropy, io, kmatryoshkad_end_read);
+  mybio_init_dev(mc, entropy, mc->entropy, io, kmatryoshkad_end_write);
 
   generic_make_request(entropy);
 }
