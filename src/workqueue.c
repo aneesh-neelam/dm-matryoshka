@@ -36,12 +36,12 @@ static void kmatryoshkad_end_read(struct bio *bio) {
   
         bio_endio(bio);
       } else if (1 > atomic_read(&(io->carrier_done))) {
-        mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]));
+        mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done))]);
         atomic_inc(&(io->carrier_done));
 
         mutex_unlock(&(io->lock));
       } else {
-      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]));
+      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done))]);
       atomic_inc(&(io->carrier_done));
 
       mybio_xor_copy(io->carrier_bios[0], io->carrier_bios[1], io->base_bio);
@@ -87,7 +87,7 @@ static void kmatryoshkad_end_write(struct bio *bio) {
   
       bio_endio(bio);
     } else if (1 > atomic_read(&(io->entropy_done))) {
-      mybio_copy_data(bio, io->entropy_bios[atomic_read(&(io->entropy_done)]);
+      mybio_copy_data(bio, io->entropy_bios[atomic_read(&(io->entropy_done))]);
       atomic_inc(&(io->entropy_done));
 
       mybio_xor_assign(io->entropy_bios[0], io->base_bio);
@@ -95,7 +95,7 @@ static void kmatryoshkad_end_write(struct bio *bio) {
       
       mutex_unlock(&(io->lock));
 
-      mybio_init_dev(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
+      mybio_init_dev(io->mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
       
       generic_make_request(io->base_bio);
     }
@@ -107,7 +107,7 @@ static void kmatryoshkad_do_write(struct matryoshka_io *io) {
   
   // struct bio *carrier = mybio_clone(io->bsse_bio);
   struct bio *entropy = mybio_clone(io->base_bio);
-  bio->bi_opf = REQ_OP_READ;
+  entropy->bi_opf = REQ_OP_READ;
 
   // mybio_init_dev(mc, carrier, mc -> carrier, io, kmatryoshkad_end_read);
   mybio_init_dev(mc, entropy, mc->entropy, io, kmatryoshkad_end_write);
