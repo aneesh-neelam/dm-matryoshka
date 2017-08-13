@@ -36,12 +36,12 @@ static void kmatryoshkad_end_read(struct bio *bio) {
   
         bio_endio(bio);
       } else if (1 > atomic_read(&(io->carrier_done))) {
-        mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]);
+        mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]));
         atomic_inc(&(io->carrier_done));
 
         mutex_unlock(&(io->lock));
       } else {
-      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]);
+      mybio_copy_data(bio, io->carrier_bios[atomic_read(&(io->carrier_done)]));
       atomic_inc(&(io->carrier_done));
 
       mybio_xor_copy(io->carrier_bios[0], io->carrier_bios[1], io->base_bio);
@@ -55,7 +55,7 @@ static void kmatryoshkad_end_read(struct bio *bio) {
 static void kmatryoshkad_do_read(struct matryoshka_io *io) {
   struct matryoshka_context *mc = io->mc;
 
-  struct bio *carrier = mybio_clone(io->bsse_bio);
+  struct bio *carrier = mybio_clone(io->base_bio);
   struct bio *entropy = mybio_clone(io->base_bio);
 
   mybio_init_dev(mc, carrier, mc->carrier, io, kmatryoshkad_end_read);
@@ -73,7 +73,7 @@ static void kmatryoshkad_end_write(struct bio *bio) {
     io_accumulate_error(io, bio->bi_error);
     mutex_unlock(&(io->lock));
   } else if (!io->error) {
-    if (1 == atomic_read(&(io->erasure_done)) {
+    if (1 == atomic_read(&(io->erasure_done))) {
       mutex_unlock(&(io->lock));
 
       mybio_free(bio);
