@@ -81,53 +81,16 @@ void io_accumulate_error(struct matryoshka_io *io, int error) {
   \param[in] sbio The bio structure to clone.
   \retval NULL if no memory could be allocated.
 */
-struct bio *mybio_clone(struct bio *sbio) {
-    struct bio *bio = bio_kmalloc(GFP_NOIO, sbio->bi_max_vecs);
-    struct bio_vec *bvec, *sbvec;
-    unsigned short i;
-
-    if (!bio)
-        return NULL;
-
-    memcpy(bio->bi_io_vec, sbio->bi_io_vec,
-           sbio->bi_max_vecs * sizeof(struct bio_vec));
-
-    for (i = 0, bvec = bio->bi_io_vec, sbvec = sbio->bi_io_vec;
-         i < bio->bi_max_vecs; i++, bvec++, sbvec++) {
-        bvec->bv_page = alloc_page(GFP_NOIO);
-        if (!bvec->bv_page)
-            goto mybio_clone_cleanup;
-
-        bvec->bv_offset = sbvec->bv_offset;
-        bvec->bv_len = sbvec->bv_len;
-    }
-
-    bio->bi_sector = sbio->bi_sector;
-    bio->bi_rw = sbio->bi_rw;
-    bio->bi_vcnt = sbio->bi_vcnt;
-    bio->bi_size = sbio->bi_size;
-    bio->bi_idx = 0;
-    return bio;
-
-mybio_clone_cleanup:
-    while (i--) {
-        bvec--;
-        __free_page(bvec->bv_page);
-    }
-    return NULL;
+inline struct bio *mybio_clone(struct bio *sbio) {
+  return bio(sbio);
 }
 
 /**
   Deallocates a bio structure and all of the pages associated to its bio_vec's.
   \param[in] bio the bio to free.
 */
-void mybio_free(struct bio *bio) {
-    unsigned short i;
-    struct bio_vec *bvec = bio->bi_io_vec;
-    for (i = 0; i < bio->bi_max_vecs; i++, bvec++)
-        __free_page(bvec->bv_page);
-
-    (*bio->bi_destructor)(bio);
+inline void mybio_free(struct bio *bio) {
+  bio_put(bio);
 }
 
 /**
@@ -139,25 +102,8 @@ void mybio_free(struct bio *bio) {
   \param[in] src The source bio of the data.
   \param[out] dst The destination bio for the data.
 */
-void mybio_copy_data(struct bio *src, struct bio *dst) {
-    struct bio_vec *src_bvec, *dst_bvec;
-    char *src_buf, *dst_buf;
-    unsigned short i;
-
-    BUG_ON(src->bi_size != dst->bi_size);
-    BUG_ON(src->bi_vcnt != dst->bi_vcnt);
-
-    for (i = 0, src_bvec = src->bi_io_vec, dst_bvec = dst->bi_io_vec; i < src->bi_vcnt; i++, src_bvec++, dst_bvec++) {
-        BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
-
-        src_buf = __bio_kmap_atomic(src, i);
-        dst_buf = __bio_kmap_atomic(dst, i);
-        memcpy(dst_buf + dst_bvec->bv_offset,
-               src_buf + src_bvec->bv_offset,
-               src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf);
-        __bio_kunmap_atomic(src_buf);
-    }
+inline void mybio_copy_data(struct bio *src, struct bio *dst) {
+  bio_copy_data(dst, src);
 }
 
 /**
@@ -218,26 +164,16 @@ void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matry
   \param[out] dst The bio to xor the data into.
 */
 void mybio_xor_assign(struct bio *src, struct bio *dst) {
-    struct bio_vec *src_bvec, *dst_bvec;
-    char *src_buf, *dst_buf;
-    unsigned short i;
+  char *src_buf, *dst_buf;
 
-    BUG_ON(src->bi_size != dst->bi_size);
-    BUG_ON(src->bi_vcnt != dst->bi_vcnt);
+  BUG_ON(src->bi_size != dst->bi_size);
+  BUG_ON(src->bi_vcnt != dst->bi_vcnt);
 
-    for (i = 0, src_bvec = src->bi_io_vec, dst_bvec = dst->bi_io_vec;
-         i < src->bi_vcnt; i++, src_bvec++, dst_bvec++)
-    {
-        BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
-
-        src_buf = __bio_kmap_atomic(src, i);
-        dst_buf = __bio_kmap_atomic(dst, i);
-        xor_assign(src_buf + src_bvec->bv_offset,
-                   dst_buf + dst_bvec->bv_offset,
-                   src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf);
-        __bio_kunmap_atomic(src_buf);
-    }
+  char *src_buf = bio_data(src);
+  char *src2_buf = bio_data(src);
+  char *dest_buf = bio_data(dest);
+  
+  xor_assign(src_buf, dst_buf, dst->bi_size)
 }
 
 /**
@@ -251,31 +187,16 @@ void mybio_xor_assign(struct bio *src, struct bio *dst) {
   \param[out] dst The bio to store the data in.
 */
 void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
-    struct bio_vec *src_bvec = src->bi_io_vec;
-    struct bio_vec *src2_bvec = src2->bi_io_vec;
-    struct bio_vec *dst_bvec = dst->bi_io_vec;
-    char *src_buf, *src2_buf, *dst_buf;
-    unsigned short i;
+  char *src_buf, *src2_buf, *dst_buf;
 
-    BUG_ON(src->bi_size != dst->bi_size);
-    BUG_ON(src->bi_vcnt != dst->bi_vcnt);
-    BUG_ON(src2->bi_size != dst->bi_size);
-    BUG_ON(src2->bi_vcnt != dst->bi_vcnt);
+  BUG_ON(src->bi_size != dst->bi_size);
+  BUG_ON(src->bi_vcnt != dst->bi_vcnt);
+  BUG_ON(src2->bi_size != dst->bi_size);
+  BUG_ON(src2->bi_vcnt != dst->bi_vcnt);
 
-    for (i = 0; i < src->bi_vcnt; i++, src_bvec++, src2_bvec++, dst_bvec++)
-    {
-        BUG_ON(src_bvec->bv_len != dst_bvec->bv_len);
-        BUG_ON(src2_bvec->bv_len != dst_bvec->bv_len);
-
-        src_buf = __bio_kmap_atomic(src, i);
-        src2_buf = __bio_kmap_atomic(src2, i);
-        dst_buf = __bio_kmap_atomic(dst, i);
-        xor_copy(src_buf + src_bvec->bv_offset,
-                 src2_buf + src2_bvec->bv_offset,
-                 dst_buf + dst_bvec->bv_offset,
-                 src_bvec->bv_len);
-        __bio_kunmap_atomic(dst_buf);
-        __bio_kunmap_atomic(src2_buf);
-        __bio_kunmap_atomic(src_buf);
-    }
+  char *src_buf = bio_data(src);
+  char *src2_buf = bio_data(src);
+  char *dest_buf = bio_data(dest);
+    
+  xor_copy(src_buf, src2_buf, dst_buf, dst->bi_size);
 }
