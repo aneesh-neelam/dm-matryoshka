@@ -16,6 +16,7 @@ void kmatryoshkad_queue_io(struct matryoshka_io *io) {
 
 static void kmatryoshkad_end_read(struct bio *bio) {
   struct matryoshka_io *io = bio->bi_private;
+  struct matryoshka_context *mc = io->mc;
 
   mutex_lock(&(io->lock));
   if (bio->bi_error) {
@@ -67,6 +68,7 @@ static void kmatryoshkad_do_read(struct matryoshka_io *io) {
 
 static void kmatryoshkad_end_write(struct bio *bio) {
   struct matryoshka_io *io = bio->bi_private;
+  struct matryoshka_context *mc = io->mc;
   
   mutex_lock(&(io->lock));
   if (bio->bi_error) {
@@ -95,7 +97,7 @@ static void kmatryoshkad_end_write(struct bio *bio) {
       
       mutex_unlock(&(io->lock));
 
-      mybio_init_dev(io->mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
+      mybio_init_dev(mc, io->base_bio, mc->carrier, io, kmatryoshkad_end_write);
       
       generic_make_request(io->base_bio);
     }
