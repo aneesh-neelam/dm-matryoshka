@@ -167,8 +167,7 @@ void mybio_xor_assign(struct bio *src, struct bio *dst) {
   char *src_buf, *dst_buf;
 
   src_buf = bio_data(src);
-  src2_buf = bio_data(src);
-  dest_buf = bio_data(dst);
+  dst_buf = bio_data(dst);
   
   xor_assign(src_buf, dst_buf, dst->bi_iter.bi_size);
 }
@@ -188,7 +187,7 @@ void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
 
   src_buf = bio_data(src);
   src2_buf = bio_data(src2);
-  dest_buf = bio_data(dst);
+  dst_buf = bio_data(dst);
     
   xor_copy(src_buf, src2_buf, dst_buf, dst->bi_iter.bi_size);
 }
