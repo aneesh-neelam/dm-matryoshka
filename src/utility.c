@@ -60,8 +60,8 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
 
   mutex_init(&(io->lock));
 
-  io->carrier_bios = init_bios(bio, 2);
-  io->entropy_bios = init_bios(bio, 1);
+  io->carrier_bios = init_bios(base_bio, 2);
+  io->entropy_bios = init_bios(base_bio, 1);
 
   return io;
 }
