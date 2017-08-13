@@ -52,7 +52,7 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
   }
   
   io->mc = mc;
-  io->base_bio = bio;
+  io->base_bio = base_bio;
 
   atomic_set(&(io->entropy_done), 0);
   atomic_set(&(io->carrier_done), 0);
@@ -60,8 +60,8 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
 
   mutex_init(&(io->lock));
 
-  carrier_bios = init_bios(bio, 2);
-  entropy_bios = init_bios(bio, 1);
+  io->carrier_bios = init_bios(bio, 2);
+  io->entropy_bios = init_bios(bio, 1);
 
   return io;
 }
@@ -82,7 +82,7 @@ void io_accumulate_error(struct matryoshka_io *io, int error) {
   \retval NULL if no memory could be allocated.
 */
 inline struct bio *mybio_clone(struct bio *sbio) {
-  return bio(sbio);
+  return bio_clone(sbio);
 }
 
 /**
@@ -166,14 +166,11 @@ void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matry
 void mybio_xor_assign(struct bio *src, struct bio *dst) {
   char *src_buf, *dst_buf;
 
-  BUG_ON(src->bi_size != dst->bi_size);
-  BUG_ON(src->bi_vcnt != dst->bi_vcnt);
-
-  char *src_buf = bio_data(src);
-  char *src2_buf = bio_data(src);
-  char *dest_buf = bio_data(dest);
+  src_buf = bio_data(src);
+  src2_buf = bio_data(src);
+  dest_buf = bio_data(dest);
   
-  xor_assign(src_buf, dst_buf, dst->bi_size)
+  xor_assign(src_buf, dst_buf, dst->bi_iter->bi_size);
 }
 
 /**
@@ -189,14 +186,9 @@ void mybio_xor_assign(struct bio *src, struct bio *dst) {
 void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
   char *src_buf, *src2_buf, *dst_buf;
 
-  BUG_ON(src->bi_size != dst->bi_size);
-  BUG_ON(src->bi_vcnt != dst->bi_vcnt);
-  BUG_ON(src2->bi_size != dst->bi_size);
-  BUG_ON(src2->bi_vcnt != dst->bi_vcnt);
-
-  char *src_buf = bio_data(src);
-  char *src2_buf = bio_data(src);
-  char *dest_buf = bio_data(dest);
+  src_buf = bio_data(src);
+  src2_buf = bio_data(src2);
+  dest_buf = bio_data(dest);
     
-  xor_copy(src_buf, src2_buf, dst_buf, dst->bi_size);
+  xor_copy(src_buf, src2_buf, dst_buf, dst->bi_iter->bi_size);
 }
