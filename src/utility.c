@@ -82,7 +82,7 @@ void io_accumulate_error(struct matryoshka_io *io, int error) {
   \retval NULL if no memory could be allocated.
 */
 inline struct bio *mybio_clone(struct bio *sbio) {
-  return bio_clone(sbio);
+  return bio_clone(sbio, GFP_NOIO);
 }
 
 /**
@@ -137,17 +137,17 @@ init_bios_cleanup:
     return NULL;
 }
 
-void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
+inline void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
   bio->bi_bdev = d->dev->bdev;
 }
 
-void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matryoshka_device *d) {
+inline void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matryoshka_device *d) {
   if (bio_sectors(bio)) {
     bio->bi_iter.bi_sector = d->start + dm_target_offset(mc->ti, bio->bi_iter.bi_sector);
   }
 }
 
-void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
+inline void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
   bio_map_dev(bio, d);
   bio_map_sector(bio, mc, d);
   bio->bi_private = io;
@@ -168,9 +168,9 @@ void mybio_xor_assign(struct bio *src, struct bio *dst) {
 
   src_buf = bio_data(src);
   src2_buf = bio_data(src);
-  dest_buf = bio_data(dest);
+  dest_buf = bio_data(dst);
   
-  xor_assign(src_buf, dst_buf, dst->bi_iter->bi_size);
+  xor_assign(src_buf, dst_buf, dst->bi_iter.bi_size);
 }
 
 /**
@@ -188,7 +188,7 @@ void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
 
   src_buf = bio_data(src);
   src2_buf = bio_data(src2);
-  dest_buf = bio_data(dest);
+  dest_buf = bio_data(dst);
     
-  xor_copy(src_buf, src2_buf, dst_buf, dst->bi_iter->bi_size);
+  xor_copy(src_buf, src2_buf, dst_buf, dst->bi_iter.bi_size);
 }
