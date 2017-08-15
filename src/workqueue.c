@@ -49,6 +49,19 @@ static void kmatryoshkad_end_read(struct bio *bio) {
       atomic_inc(&(io->erasure_done));
 
       mutex_unlock(&(io->lock));
+    } else {
+      mutex_unlock(&(io->lock));
+
+      mybio_free(bio);
+
+      bio = io->base_bio;
+      bio->bi_error = io->error;
+
+      kfree(io->carrier_bios);
+      kfree(io->entropy_bios);
+      kfree(io);
+
+      endio(io->base_bio);
     }
   }
 }
@@ -101,6 +114,19 @@ static void kmatryoshkad_end_write(struct bio *bio) {
       
       generic_make_request(io->base_bio);
     }
+  } else {
+    mutex_unlock(&(io->lock));
+
+    mybio_free(bio);
+
+    bio = io->base_bio;
+    bio->bi_error = io->error;
+
+    kfree(io->carrier_bios);
+    kfree(io->entropy_bios);
+    kfree(io);
+
+    bio_endio(bio);
   }
 }
 

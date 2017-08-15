@@ -219,7 +219,10 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
   submit_bio(bio);
   return DM_MAPIO_SUBMITTED;
   */
-  io = kmalloc(sizeof(struct matryoshka_io), GFP_KERNEL);
+  io = init_matryoshka_io(mc, bio);
+  if (io == NULL) {
+    return -ENOMEM;
+  }
 
   kmatryoshkad_queue_io(io);
 
