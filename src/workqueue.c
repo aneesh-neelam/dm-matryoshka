@@ -6,7 +6,7 @@
 
 
 void kmatryoshkad_queue_io(struct matryoshka_io *io) {
-  struct matryoshka_io *io = (struct matryoshka_io*) bio->bi_private;
+  struct matryoshka_context *mc = io->mc;
 
   INIT_WORK(&io->work, kmatryoshkad_do);
   queue_work(mc->matryoshka_wq, &io->work);
