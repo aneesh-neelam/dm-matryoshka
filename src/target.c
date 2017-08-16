@@ -9,11 +9,8 @@
 
 #include "../include/utility.h"
 #include "../include/fs.h"
-#include "../include/entropy.h"
-#include "../include/erasure.h"
 #include "../include/fs_fat.h"
 #include "../include/target.h"
-#include "../include/xor.h"
 #include "../include/workqueue.h"
 
 

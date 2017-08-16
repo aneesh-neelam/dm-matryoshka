@@ -1,8 +1,6 @@
 #include <linux/device-mapper.h>
 
 #include "../include/workqueue.h"
-#include "../include/erasure.h"
-#include "../include/xor.h"
 #include "../include/target.h"
 #include "../include/utility.h"
 
