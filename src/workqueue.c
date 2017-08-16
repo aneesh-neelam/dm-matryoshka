@@ -6,14 +6,14 @@
 
 
 void kmatryoshkad_queue_io(struct matryoshka_io *io) {
-  struct matryoshka_context *mc = io->mc;
+  struct matryoshka_io *io = (struct matryoshka_io*) bio->bi_private;
 
   INIT_WORK(&io->work, kmatryoshkad_do);
   queue_work(mc->matryoshka_wq, &io->work);
 }
 
 static void kmatryoshkad_end_carrier_read(struct bio *bio) {
-  struct matryoshka_io *io = bio->bi_private;
+  struct matryoshka_io *io = (struct matryoshka_io*) bio->bi_private;
   struct matryoshka_context *mc = io->mc;
 
   int i;
@@ -34,12 +34,12 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
 }
 
 static void kmatryoshkad_end_carrier_write(struct bio *bio) {
-  struct matryoshka_io *io = bio->bi_private;
+  struct matryoshka_io *io = (struct matryoshka_io*) bio->bi_private;
   struct matryoshka_context *mc = io->mc;
 }
 
 static void kmatryoshkad_end_entropy_read(struct bio *bio) {
-  struct matryoshka_io *io = bio->bi_private;
+  struct matryoshka_io *io = (struct matryoshka_io*) bio->bi_private;
   struct matryoshka_context *mc = io->mc;
 
   int i;
