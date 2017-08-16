@@ -12,13 +12,19 @@ int checkRatio(u8 num_carrier, u8 num_entropy);
 struct matryoshka_io *init_matryoshka_io(struct matryoshka_context*, struct bio*);
 void io_accumulate_error(struct matryoshka_io*, int);
 
-inline struct bio *mybio_clone(struct bio*);
+struct bio *matryoshka_alloc_bio(unsigned size);
+
+inline struct bio *mybio_clone(struct bio *);
 inline void mybio_free(struct bio*);
 inline void mybio_copy_data(struct bio*, struct bio*);
 struct bio **init_bios(struct bio*, unsigned int);
+
 inline void bio_map_dev(struct bio*, struct matryoshka_device*);
-inline void bio_map_sector(struct bio*, struct matryoshka_context*, struct matryoshka_device*);
-inline void mybio_init_dev(struct matryoshka_context*, struct bio*, struct matryoshka_device*, struct matryoshka_io*, bio_end_io_t);
+inline void bio_map_sector(struct bio*, sector_t);
+
+void matryoshka_bio_init(struct bio *, struct matryoshka_io *, bio_end_io_t, unsigned int);
+void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device*, struct matryoshka_io *io);
+
 void mybio_xor_assign(struct bio*, struct bio*);
 void mybio_xor_copy(struct bio*, struct bio*, struct bio*);
 

@@ -53,16 +53,14 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
   
   io->mc = mc;
   io->base_bio = base_bio;
+  io->base_sector = dm_target_offset(mc->ti, base_bio->bi_iter.bi_sector);
 
   atomic_set(&(io->entropy_done), 0);
   atomic_set(&(io->carrier_done), 0);
   atomic_set(&(io->erasure_done), 0);
 
   mutex_init(&(io->lock));
-
-  io->carrier_bios = init_bios(base_bio, 2);
-  io->entropy_bios = init_bios(base_bio, 1);
-
+  
   return io;
 }
 
@@ -141,20 +139,22 @@ inline void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
   bio->bi_bdev = d->dev->bdev;
 }
 
-inline void bio_map_sector(struct bio *bio, struct matryoshka_context *mc, struct matryoshka_device *d) {
-  if (bio_sectors(bio)) {
-    bio->bi_iter.bi_sector = d->start + dm_target_offset(mc->ti, bio->bi_iter.bi_sector);
-  }
+inline void bio_map_sector(struct bio *bio, sector_t sector) {
+  bio->bi_iter.bi_sector = sector;
 }
 
-inline void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io, bio_end_io_t ep) {
-  bio_map_dev(bio, d);
-  bio_map_sector(bio, mc, d);
+void matryoshka_bio_init(struct bio *bio, struct matryoshka_io *io, bio_end_io_t ep, unsigned int opf) {
   bio->bi_private = io;
   bio->bi_end_io = ep;
+  bio->bi_opf = opf;
 }
 
-/**
+void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io) {
+  bio_map_dev(bio, d);
+  bio_map_sector(bio, io->base_sector + d->start);
+}
+
+    /**
   Xors the data of one bio with the data another bio.
   \pre Both bio structures must hold the same amount of data.
   \pre Both bio structures must have the same number of bio_vec's.
@@ -163,7 +163,8 @@ inline void mybio_init_dev(struct matryoshka_context *mc, struct bio *bio, struc
   \param[in] src The bio to xor the data from.
   \param[out] dst The bio to xor the data into.
 */
-void mybio_xor_assign(struct bio *src, struct bio *dst) {
+    void mybio_xor_assign(struct bio *src, struct bio *dst)
+{
   char *src_buf, *dst_buf;
 
   src_buf = bio_data(src);
@@ -190,4 +191,26 @@ void mybio_xor_copy(struct bio *src, struct bio *src2, struct bio *dst) {
   dst_buf = bio_data(dst);
     
   xor_copy(src_buf, src2_buf, dst_buf, dst->bi_iter.bi_size);
+}
+
+struct bio *matryoshka_alloc_bio(unsigned size) {
+  struct bio *clone;
+  unsigned int nr_iovecs = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
+  gfp_t gfp_mask = GFP_NOWAIT | GFP_NOIO;
+  unsigned i, len, remaining_size;
+  struct page *page;
+
+  clone = bio_alloc(gfp_mask, nr_iovecs);
+
+  remaining_size = size;
+  for (i = 0; i < nr_iovecs; i++) {
+    page = alloc_page(gfp_mask);
+    len = (remaining_size > PAGE_SIZE) ? PAGE_SIZE : remaining_size;
+
+    bio_add_page(clone, page, len, 0);
+
+    remaining_size -= len;
+  }
+
+  return clone;
 }

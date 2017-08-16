@@ -212,13 +212,6 @@ static int matryoshka_map(struct dm_target *ti, struct bio *bio) {
     dm_accept_partial_bio(bio, mc->sectors_per_cluster);
   }
 
-  /*
-  bio_map_dev(bio, mc->carrier);
-  bio_map_sector(bio, mc, mc->carrier);
-
-  submit_bio(bio);
-  return DM_MAPIO_SUBMITTED;
-  */
   io = init_matryoshka_io(mc, bio);
   if (io == NULL) {
     return -ENOMEM;

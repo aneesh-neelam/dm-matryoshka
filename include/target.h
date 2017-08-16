@@ -52,16 +52,20 @@ struct matryoshka_context {
 };
 
 struct matryoshka_io {
+  struct mutex lock;
+
   struct matryoshka_context *mc;
 
   struct bio *base_bio;
+  sector_t base_sector;
 
   struct work_struct work;
 
-  struct mutex lock;
+  struct bio *entropy_bios[10];
+  struct bio *carrier_bios[10];
 
-  struct bio **entropy_bios;
-  struct bio **carrier_bios;
+  struct bvec_iter *iter_in[10];
+  struct bvec_iter *iter_out[10];
 
   atomic_t carrier_done;
   atomic_t entropy_done;
