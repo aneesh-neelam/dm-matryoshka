@@ -1,6 +1,7 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <asm/atomic.h>
+#include <linux/crc32.h>
 
 #include "../include/target.h"
 #include "../include/utility.h"
