@@ -8,6 +8,9 @@
 #include "../include/target.h"
 #include "../include/utility.h"
 
+#include "../lib/jerasure/jerasure.h"
+#include "../lib/jerasure/reed_sol.h"
+
 
 int convertStringToU8(u8* res, char* str) {
   // Parse string to unsigned long int
@@ -118,14 +121,33 @@ inline u32 crc32le(const char *buf, __kernel_size_t len) {
   return crc32_le(INIT_CRC, buf, len);
 }
 
-int erasure_encode(struct bio_vec *carrier, struct bio_vec *userdata, struct bio_vec *entropy) {
-  // TODO link with a C erasure library
+int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
+  int *matrix = NULL;
+
+  int k = mc->num_entropy + 1;
+  int m = mc->num_carrier;
+
+  int w = WORD_SIZE;
+  
+  matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
+
+  // jerasure_matrix_encode()
 
   return 0;
 }
 
 int erasure_decode(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
-  // TODO link with a C erasure library
+  int *matrix = NULL;
+  
+  int k = mc->num_entropy + 1;
+  int m = mc->num_carrier;
+  
+  int w = WORD_SIZE;
+  int numerased = 0;
+  int *erasures;
+    
+  matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
+
 
   return 0;
 }

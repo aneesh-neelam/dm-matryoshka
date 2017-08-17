@@ -8,6 +8,7 @@
 #include "target.h"
 
 #define INIT_CRC 0
+#define WORD_SIZE 32
 
 struct sdesc {
     struct shash_desc shash;
