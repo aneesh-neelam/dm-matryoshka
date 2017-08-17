@@ -136,7 +136,7 @@ int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   return 0;
 }
 
-int erasure_decode(struct bio_vec *userdata, struct bio_vec *carrier, struct bio_vec *entropy) {
+int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   int *matrix = NULL;
   
   int k = mc->num_entropy + 1;
