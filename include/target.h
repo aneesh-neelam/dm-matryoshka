@@ -18,6 +18,7 @@
 #define VERSION_MINOR 1
 #define VERSION_PATCH 0
 
+#define MIN_IOS 64
 
 struct matryoshka_device {
   struct matryoshka_c *mc;
@@ -27,6 +28,10 @@ struct matryoshka_device {
 
 struct matryoshka_context {
   struct mutex lock;
+
+  mempool_t *page_pool;
+  struct bio_set *bs;
+  struct mutex bio_alloc_lock;
 
   struct dm_target *ti;
 

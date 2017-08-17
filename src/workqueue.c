@@ -1,4 +1,5 @@
 #include <linux/device-mapper.h>
+#include <linux/bio.h>
 
 #include "../include/workqueue.h"
 #include "../include/target.h"
@@ -21,15 +22,17 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
   atomic_inc(&(io->carrier_done));
 
   if (atomic_read(&(io->carrier_done)) == mc->num_carrier) {
-    
+
     for (i = 0; i < mc->num_entropy; ++i) {
+      matryoshka_free_buffer_pages(mc, io->entropy_bios[i]);
       bio_put(io->entropy_bios[i]);
     }
     for (i = 0; i < mc->num_carrier; ++i) {
+      matryoshka_free_buffer_pages(mc, io->carrier_bios[i]);
       bio_put(io->carrier_bios[i]);
     }
-    printk(KERN_DEBUG "Read bio, ready for erasure decoding");
 
+    printk(KERN_DEBUG "Read bio, ready for erasure decoding");
   }
 }
 
@@ -56,13 +59,16 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
         generic_make_request(io->carrier_bios[i]);
       }
     } else {
-      
+
       for (i = 0; i < mc->num_entropy; ++i) {
+        matryoshka_free_buffer_pages(mc, io->entropy_bios[i]);
         bio_put(io->entropy_bios[i]);
       }
       for (i = 0; i < mc->num_carrier; ++i) {
+        matryoshka_free_buffer_pages(mc, io->carrier_bios[i]);
         bio_put(io->carrier_bios[i]);
       }
+
       printk(KERN_DEBUG "Write bio, ready for erasure encoding");
 
     }
@@ -75,17 +81,17 @@ void kmatryoshkad_do(struct work_struct *work) {
 
   int i;
 
+  for (i = 0; i < mc->num_carrier; ++i) {
+    io->carrier_bios[i] = matryoshka_alloc_bio(mc, io->base_bio->bi_iter.bi_size);
+  }
+
   for (i = 0; i < mc->num_entropy; ++i) {
-    io->entropy_bios[i] = matryoshka_alloc_bio(io->base_bio->bi_iter.bi_size);
+    io->entropy_bios[i] = matryoshka_alloc_bio(mc, io->base_bio->bi_iter.bi_size);
 
     matryoshka_bio_init(io->entropy_bios[i], io, kmatryoshkad_end_entropy_read, READ);
     matryoshka_bio_init_linear(mc, io->entropy_bios[i], mc->entropy, io);
 
     generic_make_request(io->entropy_bios[i]);
-  }
-
-  for (i = 0; i < mc->num_carrier; ++i) {
-    io->carrier_bios[i] = matryoshka_alloc_bio(io->base_bio->bi_iter.bi_size);
   }
 
   matryoshka_bio_init_linear(mc, io->base_bio, mc->carrier, io);

@@ -24,9 +24,10 @@ int checkRatio(u8 num_carrier, u8 num_entropy);
 struct matryoshka_io *init_matryoshka_io(struct matryoshka_context*, struct bio*);
 void io_accumulate_error(struct matryoshka_io*, int);
 
-struct bio *matryoshka_alloc_bio(unsigned size);
+struct bio *matryoshka_alloc_bio(struct matryoshka_context*, unsigned size);
+void matryoshka_free_buffer_pages(struct matryoshka_context*, struct bio*);
 
-inline void bio_map_dev(struct bio*, struct matryoshka_device*);
+inline void bio_map_dev(struct bio *, struct matryoshka_device *);
 inline void bio_map_sector(struct bio*, sector_t);
 
 void matryoshka_bio_init(struct bio *, struct matryoshka_io *, bio_end_io_t, unsigned int);

@@ -94,18 +94,25 @@ void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, 
   bio_map_sector(bio, io->base_sector + d->start);
 }
 
-struct bio *matryoshka_alloc_bio(unsigned size) {
+struct bio *matryoshka_alloc_bio(struct matryoshka_context *mc, unsigned size) {
   struct bio *clone;
   unsigned int nr_iovecs = (size + PAGE_SIZE - 1) >> PAGE_SHIFT;
   gfp_t gfp_mask = GFP_NOWAIT | GFP_NOIO;
   unsigned i, len, remaining_size;
   struct page *page;
 
-  clone = bio_alloc(gfp_mask, nr_iovecs);
+  if (unlikely(gfp_mask & __GFP_DIRECT_RECLAIM)) {
+    mutex_lock(&mc->bio_alloc_lock);
+  }
+
+  clone = bio_alloc_bioset(GFP_NOIO, nr_iovecs, mc->bs);
+  if (!clone) {
+    goto out;
+  }
 
   remaining_size = size;
   for (i = 0; i < nr_iovecs; i++) {
-    page = alloc_page(gfp_mask);
+    page = mempool_alloc(mc->page_pool, gfp_mask);
     len = (remaining_size > PAGE_SIZE) ? PAGE_SIZE : remaining_size;
 
     bio_add_page(clone, page, len, 0);
@@ -113,7 +120,24 @@ struct bio *matryoshka_alloc_bio(unsigned size) {
     remaining_size -= len;
   }
 
+out:
+  if (unlikely(gfp_mask & __GFP_DIRECT_RECLAIM)) {
+    mutex_unlock(&mc->bio_alloc_lock);
+  }
+
   return clone;
+}
+
+void matryoshka_free_buffer_pages(struct matryoshka_context *mc, struct bio *clone) {
+  unsigned int i;
+  struct bio_vec *bv;
+
+  bio_for_each_segment_all(bv, clone, i)
+  {
+    BUG_ON(!bv->bv_page);
+    mempool_free(bv->bv_page, mc->page_pool);
+    bv->bv_page = NULL;
+  }
 }
 
 // Calculate CRC32 bitwise little-endian

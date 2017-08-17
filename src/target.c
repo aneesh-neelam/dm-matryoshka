@@ -44,7 +44,20 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   // Initilize the mutex(es)
-  mutex_init(&(context->lock));
+  mutex_init(&context->lock);
+  mutex_init(&context->bio_alloc_lock);
+
+  context->page_pool = mempool_create_page_pool(BIO_MAX_PAGES, 0);
+  if (!context->page_pool) {
+    ti->error = "Cannot allocate page mempool";
+    goto bad;
+  }
+
+  context->bs = bioset_create(MIN_IOS, 0);
+  if (!context->bs) {
+    ti->error = "Cannot allocate matryoshka bioset";
+    goto bad;
+  }
 
   // Initilize kmatryoshkad thread
   context->matryoshka_wq = alloc_workqueue("kmatryoshkad", WQ_HIGHPRI | WQ_CPU_INTENSIVE | WQ_MEM_RECLAIM, 1);
@@ -190,6 +203,11 @@ static void matryoshka_dtr(struct dm_target *ti) {
   flush_workqueue(context->matryoshka_wq);
   flush_scheduled_work();
   destroy_workqueue(context->matryoshka_wq);
+
+  if (context->bs) {
+    bioset_free(context->bs);
+  }
+  mempool_destroy(context->page_pool);
 
   dm_put_device(ti, carrier->dev);
   dm_put_device(ti, entropy->dev);
