@@ -2,6 +2,8 @@
 #include <linux/types.h>
 #include <asm/atomic.h>
 #include <linux/crc32.h>
+#include <linux/random.h>
+#include <crypto/hash.h>
 
 #include "../include/target.h"
 #include "../include/utility.h"
@@ -126,4 +128,89 @@ int erasure_decode(struct bio_vec *userdata, struct bio_vec *carrier, struct bio
   // TODO link with a C erasure library
 
   return 0;
+}
+
+inline void get_32bit_random_number(u32 *unum) {
+  get_random_bytes(unum, sizeof(unum));
+}
+
+/**
+ * do_shash() - Do a synchronous hash operation in software
+ * @name:       The name of the hash algorithm
+ * @result:     Buffer where digest is to be written
+ * @data1:      First part of data to hash. May be NULL.
+ * @data1_len:  Length of data1, in bytes
+ * @data2:      Second part of data to hash. May be NULL.
+ * @data2_len:  Length of data2, in bytes
+ * @key:	Key (if keyed hash)
+ * @key_len:	Length of key, in bytes (or 0 if non-keyed hash)
+ *
+ * Note that the crypto API will not select this driver's own transform because
+ * this driver only registers asynchronous algos.
+ *
+ * Return: 0 if hash successfully stored in result
+ *         < 0 otherwise
+ */
+int do_shash(unsigned char *name, unsigned char *result,
+             const u8 *data1, unsigned int data1_len,
+             const u8 *data2, unsigned int data2_len,
+             const u8 *key, unsigned int key_len) {
+  int rc;
+  unsigned int size;
+  struct crypto_shash *hash;
+  struct sdesc *sdesc;
+
+  hash = crypto_alloc_shash(name, 0, 0);
+  if (IS_ERR(hash)) {
+    rc = PTR_ERR(hash);
+    pr_err("%s: Crypto %s allocation error %d", __func__, name, rc);
+    return rc;
+  }
+
+  size = sizeof(struct shash_desc) + crypto_shash_descsize(hash);
+  sdesc = kmalloc(size, GFP_KERNEL);
+  if (!sdesc) {
+    rc = -ENOMEM;
+    pr_err("%s: Memory allocation failure", __func__);
+    goto do_shash_err;
+  }
+  sdesc->shash.tfm = hash;
+  sdesc->shash.flags = 0x0;
+
+  if (key_len > 0) {
+    rc = crypto_shash_setkey(hash, key, key_len);
+    if (rc)
+    {
+      pr_err("%s: Could not setkey %s shash", __func__, name);
+      goto do_shash_err;
+    }
+  }
+
+  rc = crypto_shash_init(&sdesc->shash);
+  if (rc) {
+    pr_err("%s: Could not init %s shash", __func__, name);
+    goto do_shash_err;
+  }
+  rc = crypto_shash_update(&sdesc->shash, data1, data1_len);
+  if (rc) {
+    pr_err("%s: Could not update1", __func__);
+    goto do_shash_err;
+  }
+  if (data2 && data2_len) {
+    rc = crypto_shash_update(&sdesc->shash, data2, data2_len);
+    if (rc)
+    {
+      pr_err("%s: Could not update2", __func__);
+      goto do_shash_err;
+    }
+  }
+  rc = crypto_shash_final(&sdesc->shash, result);
+  if (rc)
+    pr_err("%s: Could not generate %s hash", __func__, name);
+
+do_shash_err:
+  crypto_free_shash(hash);
+  kfree(sdesc);
+
+  return rc;
 }

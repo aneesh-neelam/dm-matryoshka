@@ -2,10 +2,17 @@
 #define UTILITY_H
 
 #include <linux/types.h>
+#include <linux/random.h>
+#include <crypto/hash.h>
 
 #include "target.h"
 
 #define INIT_CRC 0
+
+struct sdesc {
+    struct shash_desc shash;
+    char ctx[];
+};
 
 inline u32 crc32le(const char *, __kernel_size_t);
 
@@ -26,5 +33,8 @@ void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, 
 
 int erasure_encode(struct bio_vec *, struct bio_vec *, struct bio_vec *);
 int erasure_decode(struct bio_vec *, struct bio_vec *, struct bio_vec *);
+
+inline void get_32bit_random_number(u32*);
+int do_shash(unsigned char*, unsigned char*, const u8*, unsigned int, const u8*, unsigned int, const u8*, unsigned int);
 
 #endif /* UTILITY_H */
