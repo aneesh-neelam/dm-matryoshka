@@ -3,6 +3,7 @@
 
 #include "../include/workqueue.h"
 #include "../include/target.h"
+#include "../include/integrity.h"
 #include "../include/utility.h"
 
 
@@ -19,20 +20,21 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
 
   int i;
 
+  int index = atomic_read(&(io->carrier_done));
+
   atomic_inc(&(io->carrier_done));
 
-  if (atomic_read(&(io->carrier_done)) == mc->num_carrier) {
+  io_accumulate_error(io, bio->bi_error);
 
-    for (i = 0; i < mc->num_entropy; ++i) {
-      matryoshka_free_buffer_pages(mc, io->entropy_bios[i]);
-      bio_put(io->entropy_bios[i]);
-    }
-    for (i = 0; i < mc->num_carrier; ++i) {
-      matryoshka_free_buffer_pages(mc, io->carrier_bios[i]);
-      bio_put(io->carrier_bios[i]);
-    }
+  if (!io->error) {
 
-    printk(KERN_DEBUG "Read bio, ready for erasure decoding");
+    matryoshka_bio_integrity_check(mc, io, bio);
+
+    for (i = index + 1 + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
+      io_update_erasure(mc, io, i);
+    }
+    
+
   }
 }
 
@@ -49,28 +51,26 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
 
   atomic_inc(&(io->entropy_done));
 
-  if (atomic_read(&(io->entropy_done)) == mc->num_entropy) {
+  io_accumulate_error(io, bio->bi_error);
+
+  if (atomic_read(&(io->entropy_done)) == mc->num_entropy && !io->error) {
+
     if (bio_data_dir(io->base_bio) == READ) {
+      i = 0;
+      matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_read, READ);
+      matryoshka_bio_init_linear(mc, io->carrier_bios[i], mc->carrier, io);
+
+      generic_make_request(io->carrier_bios[i]);
+    } else {
+
+      erasure_encode(mc, io);
 
       for (i = 0; i < mc->num_carrier; ++i) {
-        matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_read, READ);
+        matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_write, WRITE);
         matryoshka_bio_init_linear(mc, io->carrier_bios[i], mc->carrier, io);
 
         generic_make_request(io->carrier_bios[i]);
       }
-    } else {
-
-      for (i = 0; i < mc->num_entropy; ++i) {
-        matryoshka_free_buffer_pages(mc, io->entropy_bios[i]);
-        bio_put(io->entropy_bios[i]);
-      }
-      for (i = 0; i < mc->num_carrier; ++i) {
-        matryoshka_free_buffer_pages(mc, io->carrier_bios[i]);
-        bio_put(io->carrier_bios[i]);
-      }
-
-      printk(KERN_DEBUG "Write bio, ready for erasure encoding");
-
     }
   }
 }

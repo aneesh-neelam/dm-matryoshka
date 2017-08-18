@@ -62,17 +62,42 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
   atomic_set(&(io->carrier_done), 0);
   atomic_set(&(io->erasure_done), 0);
 
+  io->erasures = (int*) kmalloc(sizeof(int) * (1 + mc->num_entropy + mc->num_carrier), GFP_KERNEL);
+  io->erasures[0] = 1;
+  io->erasures[1] = -1;
+
   mutex_init(&(io->lock));
   
   return io;
 }
 
-void io_accumulate_error(struct matryoshka_io *io, int error) {
-    if (!io->error) {
-        io->error = error;
-    } else if (io->error != error) {
-        io->error = -EIO;
+void io_update_erasure(struct matryoshka_context *mc, struct matryoshka_io *io, int index) {
+  int last;
+  int i;
+  
+  mutex_lock(&io->lock);
+
+  for (i = 0; i < 1 + mc->num_entropy + mc->num_carrier; ++i) {
+    if (io->erasures[i] == -1) {
+      last = i;
+      break;
     }
+  }
+
+  io->erasures[last] = index;
+  io->erasures[last + 1] = -1;
+
+  mutex_unlock(&io->lock);
+}
+
+void io_accumulate_error(struct matryoshka_io *io, int error) {
+  mutex_lock(&io->lock);
+  if (!io->error) {
+      io->error = error;
+  } else if (io->error != error) {
+      io->error = -EIO;
+  }
+  mutex_unlock(&io->lock);
 }
 
 inline void bio_map_dev(struct bio *bio, struct matryoshka_device *d) {
@@ -145,33 +170,129 @@ inline u32 crc32le(const char *buf, __kernel_size_t len) {
   return crc32_le(INIT_CRC, buf, len);
 }
 
-int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
-  int *matrix = NULL;
+void init_bvec(struct matryoshka_io *io) {
+  struct matryoshka_context *mc = io->mc;
 
-  int k = mc->num_entropy + 1;
-  int m = mc->num_carrier;
+  int i;
 
-  int w = WORD_SIZE;
-  
-  matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
-
-  // jerasure_matrix_encode()
-
-  return 0;
+  if (io->base_bio) {
+    io->iter_base = io->base_bio->bi_iter;
+  }
+  for (i = 0; i < mc->num_entropy; ++i) {
+    if (io->entropy_bios[i]) {
+      io->iter_entropy[i] = io->entropy_bios[i]->bi_iter;
+    }
+  }
+  for (i = 0; i < mc->num_carrier; ++i) {
+    if (io->carrier_bios[i]) {
+      io->iter_carrier[i] = io->carrier_bios[i]->bi_iter;
+    }
+  }
 }
 
 int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   int *matrix = NULL;
+
+  int k = mc->num_entropy + 1;
+  int m = mc->num_carrier;
+
+  int w = WORD_SIZE;
+  int *erasures = io->erasures;
+
+  int i;
+  
+  matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
+
+  init_bvec(io);
+
+  while (1) {
+    if (!io->iter_base.bi_size) {
+      break;
+    }
+    for (i = 0; i < mc->num_entropy; ++i) {
+      if (!io->iter_entropy[i].bi_size) {
+        break;
+      }
+    }
+    for (i = 0; i < mc->num_carrier; ++i) {
+      if (!io->iter_carrier[i].bi_size) {
+        break;
+      }
+    }
+
+    // jerasure_matrix_encode()
+
+    bio_advance_iter(io->base_bio, &io->iter_base, mc->sector_size);
+    for (i = 0; i < mc->num_entropy; ++i) {
+      bio_advance_iter(io->entropy_bios[i], &io->iter_entropy[i], mc->sector_size);
+    }
+    for (i = 0; i < mc->num_carrier; ++i) {
+      bio_advance_iter(io->carrier_bios[i], &io->iter_carrier[i], mc->sector_size);
+    }
+  }
+
+  return 0;
+}
+
+int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
+  int *matrix = NULL;
   
   int k = mc->num_entropy + 1;
   int m = mc->num_carrier;
+
+  int blocksize;
+
+  struct bio_vec data_vecs[k];
+  struct bio_vec coding_vecs[m];
+
+  char *data[k];
+  char *coding[k];
   
   int w = WORD_SIZE;
-  int numerased = 0;
-  int *erasures;
+
+  int i;
     
   matrix = reed_sol_vandermonde_coding_matrix(k, m, w);
 
+  init_bvec(io);
+
+  while (1) {
+    if (!io->iter_base.bi_size) {
+      break;
+    }
+    for (i = 0; i < mc->num_entropy; ++i) {
+      if (!io->iter_entropy[i].bi_size) {
+        break;
+      }
+    }
+    for (i = 0; i < mc->num_carrier; ++i) {
+      if (!io->iter_carrier[i].bi_size) {
+        break;
+      }
+    }
+
+    data_vecs[0] = bio_iter_iovec(io->base_bio, io->iter_base);
+    data[0] = page_address(data_vecs[0].bv_page);
+    blocksize = mc->sector_size;
+    for (i = 1; i < k; ++i) {
+      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      data[i] = page_address(data_vecs[i].bv_page);
+    }
+    for (i = 0; i < m; ++i) {
+      coding_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      coding[i] = page_address(coding_vecs[i].bv_page);
+    }
+
+    jerasure_matrix_encode(k, m, w, matrix, data, coding, blocksize);
+
+    bio_advance_iter(io->base_bio, &io->iter_base, mc->sector_size);
+    for (i = 0; i < mc->num_entropy; ++i) {
+      bio_advance_iter(io->entropy_bios[i], &io->iter_entropy[i], mc->sector_size);
+    }
+    for (i = 0; i < mc->num_carrier; ++i) {
+      bio_advance_iter(io->carrier_bios[i], &io->iter_carrier[i], mc->sector_size);
+    }
+  }
 
   return 0;
 }
@@ -259,4 +380,17 @@ do_shash_err:
   kfree(sdesc);
 
   return rc;
+}
+
+sector_t parse_random_sector(const u8 *data, sector_t max) {
+  sector_t ret;
+  char* bytes = kmalloc(sizeof(sector_t), GFP_KERNEL);
+
+  memcpy(bytes, data, sizeof(sector_t));
+  
+  ret = *((sector_t*) bytes);
+
+  kfree(bytes);
+
+  return ret % max;
 }

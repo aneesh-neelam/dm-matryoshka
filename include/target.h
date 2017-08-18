@@ -39,6 +39,10 @@ struct matryoshka_context {
   u8 carrier_fs;
   char *carrier_fs_name;
 
+  sector_t metadata_logical_sector;
+
+  sector_t entropy_max_sectors;
+
   struct workqueue_struct *matryoshka_wq;
 
   struct fs_fat *fs;
@@ -69,8 +73,34 @@ struct matryoshka_io {
   struct bio *entropy_bios[10];
   struct bio *carrier_bios[10];
 
-  struct bvec_iter *iter_in[10];
-  struct bvec_iter *iter_out[10];
+  struct bvec_iter iter_base;
+  struct bvec_iter iter_entropy[10];
+  struct bvec_iter iter_carrier[10];
+
+  int *erasures;
+
+  atomic_t carrier_done;
+  atomic_t entropy_done;
+  atomic_t erasure_done;
+
+  int error;
+};
+
+struct metadata_io {
+  struct mutex lock;
+
+  struct matryoshka_io *io;
+  
+  struct bio *metadata_bios[10];
+  struct bio *carrier_bios[10];
+
+  sector_t logical_sector;
+
+  struct bvec_iter iter_base;
+  struct bvec_iter iter_entropy[10];
+  struct bvec_iter iter_carrier[10];
+
+  int *erasures;
 
   atomic_t carrier_done;
   atomic_t entropy_done;

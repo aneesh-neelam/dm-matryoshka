@@ -97,7 +97,7 @@ int fat_compute_values(struct fs_fat *fat) {
 /*
   Usage:
     sector_t s = 512000;
-    int b = fat_is_cluster_used(fat, s / 16);
+    int b = fat_is_cluster_used(fat, s / sectors_per_cluster);
     printk(KERN_DEBUG "Sector %llu free?: %llu", s, b);
 */
 int fat_is_cluster_used(struct fs_fat *fat, unsigned int cluster) {

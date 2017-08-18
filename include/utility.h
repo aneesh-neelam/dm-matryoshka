@@ -23,6 +23,7 @@ int checkRatio(u8 num_carrier, u8 num_entropy);
 
 struct matryoshka_io *init_matryoshka_io(struct matryoshka_context*, struct bio*);
 void io_accumulate_error(struct matryoshka_io*, int);
+void io_update_erasure(struct matryoshka_context*, struct matryoshka_io*, int);
 
 struct bio *matryoshka_alloc_bio(struct matryoshka_context*, unsigned size);
 void matryoshka_free_buffer_pages(struct matryoshka_context*, struct bio*);
@@ -38,5 +39,6 @@ int erasure_decode(struct matryoshka_context*, struct matryoshka_io*);
 
 inline void get_32bit_random_number(u32*);
 int do_shash(unsigned char*, unsigned char*, const u8*, unsigned int, const u8*, unsigned int, const u8*, unsigned int);
+sector_t parse_random_sector(const u8*, sector_t);
 
 #endif /* UTILITY_H */
