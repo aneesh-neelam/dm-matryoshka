@@ -4,6 +4,7 @@
 #include <linux/crc32.h>
 #include <linux/random.h>
 #include <crypto/hash.h>
+#include <linux/string.h>
 
 #include "../include/target.h"
 #include "../include/utility.h"
@@ -108,10 +109,13 @@ inline void bio_map_sector(struct bio *bio, sector_t sector) {
   bio->bi_iter.bi_sector = sector;
 }
 
-void matryoshka_bio_init(struct bio *bio, struct matryoshka_io *io, bio_end_io_t ep, unsigned int opf) {
+inline void bio_map_operation(struct bio *bio, unsigned int opf) {
+  bio->bi_opf = opf;
+}
+
+void matryoshka_bio_init(struct bio *bio, struct matryoshka_io *io, bio_end_io_t ep) {
   bio->bi_private = io;
   bio->bi_end_io = ep;
-  bio->bi_opf = opf;
 }
 
 void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io) {
@@ -389,6 +393,33 @@ sector_t parse_random_sector(const u8 *data, sector_t max) {
   memcpy(bytes, data, sizeof(sector_t));
   
   ret = *((sector_t*) bytes);
+
+  kfree(bytes);
+
+  return ret % max;
+}
+
+sector_t get_sector_in_sequence(char *passphrase, sector_t logical_sector, u64 counter, sector_t max) {
+  sector_t ret;
+
+  int plen;
+  char hash[20];
+  int status;
+
+  char *bytes;
+
+  plen = strlen(passphrase);
+
+  status = do_shash("sha1", hash, (u8*)&logical_sector, sizeof(sector_t), (u8*)&counter, sizeof(u64), passphrase, plen);
+
+  if (status) {
+    return logical_sector;
+  }
+
+  bytes = kmalloc(sizeof(sector_t), GFP_KERNEL);
+  memcpy(bytes, hash, sizeof(sector_t));
+
+  ret = *((sector_t *)bytes);
 
   kfree(bytes);
 

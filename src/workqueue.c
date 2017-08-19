@@ -3,6 +3,7 @@
 
 #include "../include/workqueue.h"
 #include "../include/target.h"
+#include "../include/fs_fat.h"
 #include "../include/integrity.h"
 #include "../include/utility.h"
 
@@ -48,6 +49,8 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
   struct matryoshka_context *mc = io->mc;
 
   int i;
+  sector_t generated_sector;
+  int skip = -1;
 
   atomic_inc(&(io->entropy_done));
 
@@ -57,19 +60,53 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
 
     if (bio_data_dir(io->base_bio) == READ) {
       i = 0;
-      matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_read, READ);
-      matryoshka_bio_init_linear(mc, io->carrier_bios[i], mc->carrier, io);
 
-      generic_make_request(io->carrier_bios[i]);
+      do {
+        if (skip = -1) {
+          skip = 0;
+        } else {
+          skip++;
+        }
+        if (skip > 10) {
+          break;
+        }
+        generated_sector = get_sector_in_sequence(mc->passphrase, io->base_sector, i + skip, mc->cluster_count * mc->sectors_per_cluster);
+      } while (fat_is_cluster_used(mc->fs, generated_sector / mc->sectors_per_cluster));
+
+      if (skip <= 10) {
+        matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_read);
+        bio_map_operation(io->carrier_bios[i], READ);
+        bio_map_dev(io->carrier_bios[i], mc->carrier);
+        bio_map_sector(io->carrier_bios[i], generated_sector);
+
+        generic_make_request(io->carrier_bios[i]);
+      }
     } else {
 
       erasure_encode(mc, io);
 
       for (i = 0; i < mc->num_carrier; ++i) {
-        matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_write, WRITE);
-        matryoshka_bio_init_linear(mc, io->carrier_bios[i], mc->carrier, io);
+        do {
+        if (skip = -1) {
+          skip = 0;
+        } else {
+          skip++;
+        }
+        if (skip > 10) {
+          break;
+        }
+        generated_sector = get_sector_in_sequence(mc->passphrase, io->base_sector, i + skip, mc->cluster_count * mc->sectors_per_cluster);
+      } while (fat_is_cluster_used(mc->fs, generated_sector / mc->sectors_per_cluster));
 
-        generic_make_request(io->carrier_bios[i]);
+        if (skip <= 10) {
+
+          matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_write);
+          bio_map_operation(io->carrier_bios[i], WRITE);
+          bio_map_dev(io->carrier_bios[i], mc->carrier);
+          bio_map_sector(io->carrier_bios[i], generated_sector);
+
+          generic_make_request(io->carrier_bios[i]);
+        }
       }
     }
   }
@@ -80,6 +117,7 @@ void kmatryoshkad_do(struct work_struct *work) {
   struct matryoshka_context *mc = io->mc;
 
   int i;
+  sector_t generated_sector;
 
   for (i = 0; i < mc->num_carrier; ++i) {
     io->carrier_bios[i] = matryoshka_alloc_bio(mc, io->base_bio->bi_iter.bi_size);
@@ -88,12 +126,13 @@ void kmatryoshkad_do(struct work_struct *work) {
   for (i = 0; i < mc->num_entropy; ++i) {
     io->entropy_bios[i] = matryoshka_alloc_bio(mc, io->base_bio->bi_iter.bi_size);
 
-    matryoshka_bio_init(io->entropy_bios[i], io, kmatryoshkad_end_entropy_read, READ);
-    matryoshka_bio_init_linear(mc, io->entropy_bios[i], mc->entropy, io);
+    generated_sector = get_sector_in_sequence(mc->passphrase, io->base_sector, i, mc->entropy_max_sectors);
+
+    matryoshka_bio_init(io->entropy_bios[i], io, kmatryoshkad_end_entropy_read);
+    bio_map_operation(io->entropy_bios[i], READ);
+    bio_map_dev(io->entropy_bios[i], mc->entropy);
+    bio_map_sector(io->entropy_bios[i], generated_sector);
 
     generic_make_request(io->entropy_bios[i]);
   }
-
-  matryoshka_bio_init_linear(mc, io->base_bio, mc->carrier, io);
-  generic_make_request(io->base_bio);
 }
