@@ -1,0 +1,1 @@
+0 $(($(blockdev --getsize /dev/loop10) / 2)) matryoshka abcd 1 1 /dev/loop10 0 /dev/loop11 0 $(blockdev --getsize /dev/loop11) fat

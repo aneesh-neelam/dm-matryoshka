@@ -129,7 +129,15 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   // Starting sector for entropy device
   status = convertStringToSector_t(&(entropy->start), argv[6]);
   if (status) {
-    ti->error = "dm-matryoshka: Invalid entropy device sector";
+    ti->error = "dm-matryoshka: Invalid entropy device starting sector";
+    status = -EINVAL;
+    goto bad;
+  }
+
+  // Starting sector for entropy device
+  status = convertStringToSector_t(&(mc->entropy_max_sectors), argv[7]);
+  if (status) {
+    ti->error = "dm-matryoshka: Invalid entropy device max sector";
     status = -EINVAL;
     goto bad;
   }
@@ -139,7 +147,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   context->entropy = entropy;
 
   // Parse FS type
-  context->carrier_fs = get_carrier_fs(argv[7]);
+  context->carrier_fs = get_carrier_fs(argv[8]);
   if (context->carrier_fs == FS_FAT) {
     status = fat_get_header(fat, carrier->dev, carrier->start);
     if (status) {
