@@ -43,7 +43,7 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
   int integrity = 0;
   int status;
 
-  sector_t generated_sector;
+  sector_t generated_sector = 0;
 
   skip = atomic_read(&(io->carrier_done));
   index = skip / 10;
@@ -53,10 +53,6 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
   io_accumulate_error(io, bio->bi_error);
 
   if (!io->error) {
-
-    for (i = index + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
-      io_update_erasures(mc, io, i);
-    }
     status = erasure_decode(mc, io);
     if (!status) {
       integrity = matryoshka_bio_integrity_check(mc, io, bio);
@@ -67,7 +63,7 @@ static void kmatryoshkad_end_carrier_read(struct bio *bio) {
           io_accumulate_error(io, -EIO);
           break;
         }
-        generated_sector = get_sector_in_sequence(mc->passphrase, io->base_sector, i + skip, mc->cluster_count * mc->sectors_per_cluster);
+        generated_sector = get_sector_in_sequence(mc->passphrase, io->base_sector, index + (skip % 10), mc->cluster_count * mc->sectors_per_cluster);
         skip++;
       } while (fat_is_cluster_used(mc->fs, generated_sector / mc->sectors_per_cluster));
 
@@ -153,7 +149,7 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
       skip = -1;
 
       do {
-        if (skip = -1) {
+        if (skip == -1) {
           skip = 0;
         } else {
           skip++;
@@ -166,6 +162,9 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
       } while (fat_is_cluster_used(mc->fs, generated_sector / mc->sectors_per_cluster));
 
       if (skip <= 10) {
+        for (i = 1 + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
+          io_update_erasures(mc, io, i);
+        }
         atomic_set(&(io->carrier_done), skip);
 
         matryoshka_bio_init(io->carrier_bios[i], io, kmatryoshkad_end_carrier_read);
@@ -189,7 +188,7 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
 
       for (i = 0; i < mc->num_carrier; ++i) {
         do {
-          if (skip = -1) {
+          if (skip == -1) {
             skip = 0;
           } else {
             skip++;

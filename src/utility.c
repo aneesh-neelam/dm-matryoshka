@@ -73,7 +73,7 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
 }
 
 void io_update_erasures(struct matryoshka_context *mc, struct matryoshka_io *io, int index) {
-  int last;
+  int last = 0;
   int i;
   
   mutex_lock(&io->lock);
@@ -85,8 +85,10 @@ void io_update_erasures(struct matryoshka_context *mc, struct matryoshka_io *io,
     }
   }
 
-  io->erasures[last] = index;
-  io->erasures[last + 1] = -1;
+  if (last != 0) {
+    io->erasures[last] = index;
+    io->erasures[last + 1] = -1;
+  }
 
   mutex_unlock(&io->lock);
 }
@@ -260,7 +262,7 @@ int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   return status;
 }
 
-int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
+void erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   int *matrix = NULL;
   
   int k = mc->num_entropy + 1;
@@ -319,8 +321,6 @@ int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
       bio_advance_iter(io->carrier_bios[i], &io->iter_carrier[i], mc->sector_size);
     }
   }
-
-  return 0;
 }
 
 inline void get_32bit_random_number(u32 *unum) {
