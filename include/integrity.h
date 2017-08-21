@@ -35,5 +35,6 @@ struct metadata_io {
 };
 
 int matryoshka_bio_integrity_check(struct matryoshka_context*, struct matryoshka_io*, struct bio*);
+int matryoshka_bio_integrity_update(struct matryoshka_context*, struct matryoshka_io*, struct bio*);
 
 #endif /* INTEGRITY_H */

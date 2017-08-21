@@ -56,3 +56,11 @@ int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryos
 
   return 0;
 }
+
+int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryoshka_io *io, struct bio *bio) {
+  int i;
+
+  struct metadata_io *mio = init_metadata_io(mc, io);
+
+  return 0;
+}

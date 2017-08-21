@@ -135,7 +135,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   }
 
   // Starting sector for entropy device
-  status = convertStringToSector_t(&(mc->entropy_max_sectors), argv[7]);
+  status = convertStringToSector_t(&(context->entropy_max_sectors), argv[7]);
   if (status) {
     ti->error = "dm-matryoshka: Invalid entropy device max sector";
     status = -EINVAL;

@@ -72,7 +72,7 @@ struct matryoshka_io *init_matryoshka_io(struct matryoshka_context *mc, struct b
   return io;
 }
 
-void io_update_erasure(struct matryoshka_context *mc, struct matryoshka_io *io, int index) {
+void io_update_erasures(struct matryoshka_context *mc, struct matryoshka_io *io, int index) {
   int last;
   int i;
   
@@ -113,12 +113,12 @@ inline void bio_map_operation(struct bio *bio, unsigned int opf) {
   bio->bi_opf = opf;
 }
 
-void matryoshka_bio_init(struct bio *bio, struct matryoshka_io *io, bio_end_io_t ep) {
+inline void matryoshka_bio_init(struct bio *bio, struct matryoshka_io *io, bio_end_io_t ep) {
   bio->bi_private = io;
   bio->bi_end_io = ep;
 }
 
-void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io) {
+inline void matryoshka_bio_init_linear(struct matryoshka_context *mc, struct bio *bio, struct matryoshka_device *d, struct matryoshka_io *io) {
   bio_map_dev(bio, d);
   bio_map_sector(bio, io->base_sector + d->start);
 }
@@ -195,10 +195,20 @@ void init_bvec(struct matryoshka_io *io) {
 }
 
 int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
+  int status = 0;
+
   int *matrix = NULL;
 
   int k = mc->num_entropy + 1;
   int m = mc->num_carrier;
+
+  int blocksize;
+
+  struct bio_vec data_vecs[k];
+  struct bio_vec coding_vecs[m];
+
+  char *data[k];
+  char *coding[m];
 
   int w = WORD_SIZE;
   int *erasures = io->erasures;
@@ -224,7 +234,19 @@ int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
       }
     }
 
-    // jerasure_matrix_encode()
+    data_vecs[0] = bio_iter_iovec(io->base_bio, io->iter_base);
+    data[0] = page_address(data_vecs[0].bv_page);
+    blocksize = mc->sector_size;
+    for (i = 1; i < k; ++i) {
+      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      data[i] = page_address(data_vecs[i].bv_page);
+    }
+    for (i = 0; i < m; ++i) {
+      coding_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      coding[i] = page_address(coding_vecs[i].bv_page);
+    }
+
+    status = jerasure_matrix_decode(k, m, w, matrix, ROW_K_ONES, erasures, data, coding, blocksize);
 
     bio_advance_iter(io->base_bio, &io->iter_base, mc->sector_size);
     for (i = 0; i < mc->num_entropy; ++i) {
@@ -235,7 +257,7 @@ int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
     }
   }
 
-  return 0;
+  return status;
 }
 
 int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
@@ -250,7 +272,7 @@ int erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
   struct bio_vec coding_vecs[m];
 
   char *data[k];
-  char *coding[k];
+  char *coding[m];
   
   int w = WORD_SIZE;
 
