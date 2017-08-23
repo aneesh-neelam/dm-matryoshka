@@ -11,6 +11,7 @@
 #include "../include/fs.h"
 #include "../include/fs_fat.h"
 #include "../include/target.h"
+#include "../include/integrity.h"
 #include "../include/workqueue.h"
 
 
@@ -134,7 +135,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     goto bad;
   }
 
-  // Starting sector for entropy device
+  // Max sector for entropy device
   status = convertStringToSector_t(&(context->entropy_max_sectors), argv[7]);
   if (status) {
     ti->error = "dm-matryoshka: Invalid entropy device max sector";
@@ -173,7 +174,13 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     context->carrier_fs_name = get_fs_name(context->carrier_fs);
   }
 
-  
+  // Check for head of list of Metadata Blocks, initalize if not present already
+  status = matryoshka_metadata_init(context);
+  if (status) {
+    status = -EIO;
+    ti->error = "dm-matryoshka: Cannot find/initalize head of Metadata Block list";
+    goto bad;
+  }
 
   // Target config
   ti->num_flush_bios = 1;

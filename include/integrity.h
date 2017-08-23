@@ -48,4 +48,6 @@ int metadata_update(struct matryoshka_context*, char*, __kernel_size_t, struct b
 int metadata_check(struct matryoshka_context*, char*, __kernel_size_t, struct bio*);
 sector_t metadata_next_in_list(char*, __kernel_size_t);
 
+int matryoshka_metadata_init(struct matryoshka_context*);
+
 #endif /* INTEGRITY_H */

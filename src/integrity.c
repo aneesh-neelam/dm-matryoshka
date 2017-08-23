@@ -469,9 +469,12 @@ sector_t metadata_next_in_list(char *metadata, __kernel_size_t size) {
 }
 
 int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryoshka_io *io, struct bio *bio) {
-  int i;
-  int error;
+  int i, j;
+  int ret;
+  int error = 0;
   int reached_end_of_list = 0;
+
+  char *metadata;
 
   struct metadata_io *mio = alloc_metadata_io(mc, io);
   mio->logical_sector = mc->metadata_logical_sector;
@@ -483,8 +486,57 @@ int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryos
       return error;
     }
 
+    for (i = 0; i < mc->num_entropy; ++i) {
+      ret = submit_bio_wait(mio->entropy_bios[i]);
+      if (ret) {
+        error = ret;
+        free_metadata_io(mc, mio);
+        return error;
+      }
+    }
 
+    for (i = 0; i < mc->num_carrier; ++i) {
+      for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
+        mio_update_erasures(mc, mio, i);
+      }
+
+      ret = submit_bio_wait(mio->carrier_bios[i]);
+      if (ret) {
+        error = ret;
+        free_metadata_io(mc, mio);
+        return error;
+      }
+      
+      mio->error = metadata_erasure_decode(mc, mio);
+      if (mio->error) {
+        mio_update_erasures(mc, mio, i);
+      } else {
+        break;
+      }
+    }
+
+    metadata = metadata_parse_bio(mc, mio->base_bio);
+    if (metadata_verify(metadata, mc->cluster_size)) {
+      error = -EIO;
+      free_metadata_io(mc, mio);
+      return error;
+    }
+
+    mio->error = metadata_check(mc, metadata, mc->cluster_size, bio);
+    if (mio->error == 1)  {
+      mio->logical_sector = metadata_next_in_list(metadata, mc->cluster_size);
+    }
+    else {
+      reached_end_of_list = 1;
+    }
   } while(!reached_end_of_list);
+
+  if (mio) {
+    error = mio->error;
+    free_metadata_io(mc, mio);
+  }
+
+
   return error;
 }
 
@@ -505,17 +557,14 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
       free_metadata_io(mc, mio);
       return error;
     }
+
     for (i = 0; i < mc->num_entropy; ++i) {
       ret = submit_bio_wait(mio->entropy_bios[i]);
-      if (!mio->error) {
-        mio->error = ret;
+      if (ret) {
+        error = ret;
+        free_metadata_io(mc, mio);
+        return error;
       }
-    }
-    
-    if (mio->error) {
-      error = mio->error;
-      free_metadata_io(mc, mio);
-      return error;
     }
 
     for (i = 0; i < mc->num_carrier; ++i) {
@@ -530,8 +579,8 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
         return error;
       }
       
-      error = metadata_erasure_decode(mc, mio);
-      if (error) {
+      mio->error = metadata_erasure_decode(mc, mio);
+      if (mio->error) {
         mio_update_erasures(mc, mio, i);
       } else {
         break;
@@ -559,16 +608,13 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
 
         for (i = 0; i < mc->num_entropy; ++i) {
           ret = submit_bio_wait(mio->entropy_bios[i]);
-          if (!mio->error) {
-            mio->error = ret;
+          if (ret) {
+            error = ret;
+            free_metadata_io(mc, mio);
+            return error;
           }
         }
-
-        if (mio->error) {
-          error = mio->error;
-          free_metadata_io(mc, mio);
-          return error;
-        }
+        
 
         metadata_erasure_encode(mc, mio);
 
@@ -576,7 +622,7 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
           bio_map_operation(mio->carrier_bios[i], WRITE);
 
           ret = submit_bio_wait(mio->carrier_bios[i]);
-          if (!mio->error) {
+          if (!mio->error && ret) {
             mio->error = ret;
           }
         }
@@ -598,6 +644,81 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
     }
 
   } while(!reached_end_of_list);
+
+  if (mio) {
+    error = mio->error;
+    free_metadata_io(mc, mio);
+  }
+
+  return error;
+}
+
+int matryoshka_metadata_init(struct matryoshka_context *mc) {
+  int i, j;
+  int ret;
+  struct metadata_io *mio;
+  int error = 0;
+
+  char *metadata;
+
+  mio = alloc_metadata_io(mc, NULL);
+  mio->logical_sector = mc->metadata_logical_sector;
+
+  init_metadata_bios(mc, mio);
+  if (mio->error) {
+    error = mio->error;
+    free_metadata_io(mc, mio);
+    return error;
+  }
+
+  for (i = 0; i < mc->num_entropy; ++i) {
+    ret = submit_bio_wait(mio->entropy_bios[i]);
+    if (ret) {
+      error = ret;
+      free_metadata_io(mc, mio);
+      return error;
+    }
+  }
+
+  for (i = 0; i < mc->num_carrier; ++i) {
+    for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
+      mio_update_erasures(mc, mio, i);
+    }
+
+    ret = submit_bio_wait(mio->carrier_bios[i]);
+    if (ret) {
+      error = ret;
+      free_metadata_io(mc, mio);
+      return error;
+    }
+      
+    mio->error = metadata_erasure_decode(mc, mio);
+    if (mio->error) {
+      mio_update_erasures(mc, mio, i);
+    } else {
+      break;
+    }
+  }
+
+  metadata = metadata_parse_bio(mc, mio->base_bio);
+  if (metadata_verify(metadata, mc->cluster_size)) {
+    metadata = metadata_init(mc->cluster_size);
+
+    metadata_update_base_bio(mc, mio->base_bio, metadata);
+
+    metadata_erasure_encode(mc, mio);
+
+    for (i = 0; i < mc->num_carrier; ++i) {
+      bio_map_operation(mio->carrier_bios[i], WRITE);
+
+      ret = submit_bio_wait(mio->carrier_bios[i]);
+      if (ret) {
+        error = ret;
+        free_metadata_io(mc, mio);
+        return error;
+      }
+    }
+  }
 
   if (mio) {
     error = mio->error;
