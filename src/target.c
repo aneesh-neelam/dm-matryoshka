@@ -29,7 +29,7 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
   int status = -EIO;
 
   // Check number of arguments
-  if (argc != 8) {
+  if (argc != 9) {
     ti->error = "dm:matryoshka: Invalid number of arguments for constructor";
     return -EINVAL;
   }

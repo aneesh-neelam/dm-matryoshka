@@ -34,6 +34,7 @@ struct metadata_io* alloc_metadata_io(struct matryoshka_context *mc, struct matr
     mio->entropy_bios[i] = matryoshka_alloc_bio(mc, mc->cluster_size);
   }
 
+  mio->erasures = (int *)kmalloc(sizeof(int) * (1 + mc->num_entropy + mc->num_carrier), GFP_KERNEL);
   mio->erasures[0] = 1;
   mio->erasures[1] = -1;
 
@@ -56,6 +57,7 @@ void free_metadata_io(struct matryoshka_context *mc, struct metadata_io *mio) {
     bio_put(mio->entropy_bios[i]);
   }
 
+  kfree(mio->erasures);
   kfree(mio);
 }
 
@@ -292,7 +294,7 @@ char* metadata_parse_bio(struct matryoshka_context *mc, struct bio *base_bio) {
   return metadata;
 }
 
-void metadata_update_base_bio(struct matryoshka_context *mc, struct bio *base_bio, char *metadata) {
+void metadata_update_bio(struct matryoshka_context *mc, struct bio *base_bio, char *metadata) {
   char *buffer;
   int seek;
 
@@ -333,6 +335,22 @@ int metadata_verify(char *metadata, __kernel_size_t size) {
     return 0;
   }
   return 1;
+}
+
+int metadata_update_checksum(char *metadata, __kernel_size_t size) {
+  char *checksum;
+  u32 computed_crc;
+
+  checksum = kmalloc(sizeof(u32), GFP_KERNEL);
+
+  computed_crc = crc32le(metadata + sizeof(u32), size - sizeof(u32));
+
+  checksum = ((char *)&computed_crc);
+  memcpy(metadata, checksum, sizeof(u32));
+
+  kfree(checksum);
+
+  return 0;
 }
 
 char *metadata_init(__kernel_size_t size) {
@@ -468,6 +486,38 @@ sector_t metadata_next_in_list(char *metadata, __kernel_size_t size) {
   return sector;
 }
 
+int metadata_update_link(struct matryoshka_context *mc, struct metadata_io *mio, char *metadata, sector_t next) {
+  char *sector_bytes;
+  int seek = sizeof(u32);
+  int i;
+  int ret;
+
+  sector_bytes = kmalloc(sizeof(u32), GFP_KERNEL);
+
+  sector_bytes = ((char *)&next);
+  memcpy(metadata + seek, sector_bytes, sizeof(u32));
+
+  kfree(sector_bytes);
+
+  metadata_update_bio(mc, mio->base_bio, metadata);
+
+  metadata_erasure_encode(mc, mio);
+
+  for (i = 0; i < mc->num_carrier; ++i) {
+    bio_map_operation(mio->carrier_bios[i], WRITE);
+
+    ret = submit_bio_wait(mio->carrier_bios[i]);
+    if (!mio->error && ret) {
+      mio->error = ret;
+    }
+  }
+
+  if (mio->error) {
+    return mio->error;
+  }
+  return 0;
+}
+
 int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryoshka_io *io, struct bio *bio) {
   int i, j;
   int ret;
@@ -547,6 +597,7 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
   int reached_end_of_list = 0;
 
   char *metadata;
+  u32 next;
 
   struct metadata_io *mio = alloc_metadata_io(mc, io);
   mio->logical_sector = mc->metadata_logical_sector;
@@ -601,9 +652,18 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
       reached_end_of_list = 1;
 
       if (mio->error == -1) {
+        get_32bit_random_number(&next);
+
+        mio->error = metadata_update_link(mc, mio, metadata, next);
+        if (mio->error) {
+          error = mio->error;
+          free_metadata_io(mc, mio);
+          return error;
+        }
+
         metadata = metadata_init(mc->cluster_size);
         mio->error = metadata_update(mc, metadata, mc->cluster_size, mio->carrier_bios[i]);
-        metadata_update_base_bio(mc, mio->base_bio, metadata);
+        metadata_update_bio(mc, mio->base_bio, metadata);
         init_metadata_bios(mc, mio);
 
         for (i = 0; i < mc->num_entropy; ++i) {
@@ -628,7 +688,7 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
         }
 
       } else {
-        metadata_update_base_bio(mc, mio->base_bio, metadata);
+        metadata_update_bio(mc, mio->base_bio, metadata);
 
         metadata_erasure_encode(mc, mio);
 
@@ -704,7 +764,7 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
   if (metadata_verify(metadata, mc->cluster_size)) {
     metadata = metadata_init(mc->cluster_size);
 
-    metadata_update_base_bio(mc, mio->base_bio, metadata);
+    metadata_update_bio(mc, mio->base_bio, metadata);
 
     metadata_erasure_encode(mc, mio);
 

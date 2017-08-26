@@ -35,6 +35,7 @@ void mio_update_erasures(struct matryoshka_context *mc, struct metadata_io *io, 
 
 void init_metadata_bvec(struct matryoshka_context*, struct metadata_io*);
 char* metadata_parse_bio(struct matryoshka_context*, struct bio*);
+void metadata_update_bio(struct matryoshka_context*, struct bio*, char*);
 
 void metadata_erasure_encode(struct matryoshka_context*, struct metadata_io*);
 int metadata_erasure_decode(struct matryoshka_context*, struct metadata_io*);
@@ -43,10 +44,12 @@ int matryoshka_bio_integrity_check(struct matryoshka_context*, struct matryoshka
 int matryoshka_bio_integrity_update(struct matryoshka_context*, struct matryoshka_io*, struct bio*);
 
 int metadata_verify(char*, __kernel_size_t);
+int metadata_update_checksum(char*, __kernel_size_t);
 char *metadata_init(__kernel_size_t);
 int metadata_update(struct matryoshka_context*, char*, __kernel_size_t, struct bio*);
 int metadata_check(struct matryoshka_context*, char*, __kernel_size_t, struct bio*);
 sector_t metadata_next_in_list(char*, __kernel_size_t);
+int metadata_update_link(struct matryoshka_context*, struct metadata_io*, char*, sector_t);
 
 int matryoshka_metadata_init(struct matryoshka_context*);
 
