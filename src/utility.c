@@ -432,7 +432,7 @@ sector_t get_sector_in_sequence(char *passphrase, sector_t logical_sector, u64 c
 
   plen = strlen(passphrase);
 
-  status = do_shash("sha1", hash, (u8*)&logical_sector, sizeof(sector_t), (u8*)&counter, sizeof(u64), passphrase, plen);
+  status = do_shash("hmac(sha1)", hash, (u8 *)&logical_sector, sizeof(sector_t), (u8 *)&counter, sizeof(u64), passphrase, plen);
 
   if (status) {
     return logical_sector;
