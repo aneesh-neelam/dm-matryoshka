@@ -240,11 +240,11 @@ int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
     data[0] = page_address(data_vecs[0].bv_page);
     blocksize = mc->sector_size;
     for (i = 1; i < k; ++i) {
-      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i-1], io->iter_entropy[i-1]);
       data[i] = page_address(data_vecs[i].bv_page);
     }
     for (i = 0; i < m; ++i) {
-      coding_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      coding_vecs[i] = bio_iter_iovec(io->carrier_bios[i], io->iter_carrier[i]);
       coding[i] = page_address(coding_vecs[i].bv_page);
     }
 
@@ -303,11 +303,11 @@ void erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
     data[0] = page_address(data_vecs[0].bv_page);
     blocksize = mc->sector_size;
     for (i = 1; i < k; ++i) {
-      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      data_vecs[i] = bio_iter_iovec(io->entropy_bios[i-1], io->iter_entropy[i-1]);
       data[i] = page_address(data_vecs[i].bv_page);
     }
     for (i = 0; i < m; ++i) {
-      coding_vecs[i] = bio_iter_iovec(io->entropy_bios[i], io->iter_entropy[i]);
+      coding_vecs[i] = bio_iter_iovec(io->carrier_bios[i], io->iter_carrier[i]);
       coding[i] = page_address(coding_vecs[i].bv_page);
     }
 

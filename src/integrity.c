@@ -74,7 +74,7 @@ void mio_update_erasures(struct matryoshka_context *mc, struct metadata_io *mio,
     }
   }
 
-  if (last != 0) {
+  if (last != 1 + mc->num_entropy + mc->num_carrier) {
     mio->erasures[last] = index;
     mio->erasures[last + 1] = -1;
   }
@@ -185,11 +185,11 @@ int metadata_erasure_decode(struct matryoshka_context *mc, struct metadata_io *m
     data[0] = page_address(data_vecs[0].bv_page);
     blocksize = mc->sector_size;
     for (i = 1; i < k; ++i) {
-      data_vecs[i] = bio_iter_iovec(mio->entropy_bios[i], mio->iter_entropy[i]);
+      data_vecs[i] = bio_iter_iovec(mio->entropy_bios[i-1], mio->iter_entropy[i-1]);
       data[i] = page_address(data_vecs[i].bv_page);
     }
     for (i = 0; i < m; ++i) {
-      coding_vecs[i] = bio_iter_iovec(mio->entropy_bios[i], mio->iter_entropy[i]);
+      coding_vecs[i] = bio_iter_iovec(mio->carrier_bios[i], mio->iter_carrier[i]);
       coding[i] = page_address(coding_vecs[i].bv_page);
     }
 
@@ -248,11 +248,11 @@ void metadata_erasure_encode(struct matryoshka_context *mc, struct metadata_io *
     data[0] = page_address(data_vecs[0].bv_page);
     blocksize = mc->sector_size;
     for (i = 1; i < k; ++i) {
-      data_vecs[i] = bio_iter_iovec(mio->entropy_bios[i], mio->iter_entropy[i]);
+      data_vecs[i] = bio_iter_iovec(mio->entropy_bios[i-1], mio->iter_entropy[i-1]);
       data[i] = page_address(data_vecs[i].bv_page);
     }
     for (i = 0; i < m; ++i) {
-      coding_vecs[i] = bio_iter_iovec(mio->entropy_bios[i], mio->iter_entropy[i]);
+      coding_vecs[i] = bio_iter_iovec(mio->carrier_bios[i], mio->iter_carrier[i]);
       coding[i] = page_address(coding_vecs[i].bv_page);
     }
 
