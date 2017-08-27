@@ -174,6 +174,9 @@ static int matryoshka_ctr(struct dm_target *ti, unsigned int argc, char **argv) 
     context->carrier_fs_name = get_fs_name(context->carrier_fs);
   }
 
+  // Get logical sector for Metadata Block
+  context->metadata_logical_sector = get_sector_in_sequence(context->passphrase, 0, 0, context->cluster_count * context->sectors_per_cluster);
+
   // Check for head of list of Metadata Blocks, initalize if not present already
   status = matryoshka_metadata_init(context);
   if (status) {
