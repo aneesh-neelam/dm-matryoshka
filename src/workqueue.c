@@ -162,8 +162,8 @@ static void kmatryoshkad_end_entropy_read(struct bio *bio) {
       } while (fat_is_cluster_used(mc->fs, generated_sector / mc->sectors_per_cluster));
 
       if (skip <= 10) {
-        for (i = 1 + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
-          io_update_erasures(mc, io, i);
+        for (i = 1 + mc->num_entropy; j < mc->num_carrier + mc->num_entropy + 1; ++j) {
+          io_update_erasures(mc, io, j);
         }
         atomic_set(&(io->carrier_done), skip);
 

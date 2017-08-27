@@ -548,8 +548,8 @@ int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryos
     }
 
     for (i = 0; i < mc->num_carrier; ++i) {
-      for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
-        mio_update_erasures(mc, mio, i);
+      for (j = i + mc->num_entropy; j < mc->num_carrier + mc->num_entropy + 1; ++j) {
+        mio_update_erasures(mc, mio, j);
       }
 
       ret = submit_bio_wait(mio->carrier_bios[i]);
@@ -621,8 +621,8 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
     }
 
     for (i = 0; i < mc->num_carrier; ++i) {
-      for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
-        mio_update_erasures(mc, mio, i);
+      for (j = i + mc->num_entropy; j < mc->num_carrier + mc->num_entropy + 1; ++j) {
+        mio_update_erasures(mc, mio, j);
       }
 
       ret = submit_bio_wait(mio->carrier_bios[i]);
@@ -732,8 +732,6 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     return error;
   }
 
-  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after init_bios");
-
   for (i = 0; i < mc->num_entropy; ++i) {
     ret = submit_bio_wait(mio->entropy_bios[i]);
     if (ret) {
@@ -743,12 +741,12 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     }
   }
 
-  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after entropy read");
-
   for (i = 0; i < mc->num_carrier; ++i) {
-    for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
-      mio_update_erasures(mc, mio, i);
+    for (j = i + mc->num_entropy; j < mc->num_carrier + mc->num_entropy + 1; ++j) {
+      mio_update_erasures(mc, mio, j);
     }
+
+    printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after updating erasures for Carrier: %d", i);
 
     ret = submit_bio_wait(mio->carrier_bios[i]);
     if (ret) {
