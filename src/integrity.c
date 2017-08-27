@@ -535,6 +535,8 @@ int matryoshka_bio_integrity_check(struct matryoshka_context *mc, struct matryos
       free_metadata_io(mc, mio);
       return error;
     }
+    
+    printk(KERN_DEBUG "dm-matryoshka: matryoshka_bio_integrity_check(), after init_bios");
 
     for (i = 0; i < mc->num_entropy; ++i) {
       ret = submit_bio_wait(mio->entropy_bios[i]);
@@ -629,7 +631,7 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
         free_metadata_io(mc, mio);
         return error;
       }
-      
+
       mio->error = metadata_erasure_decode(mc, mio);
       if (mio->error) {
         mio_update_erasures(mc, mio, i);
@@ -674,7 +676,6 @@ int matryoshka_bio_integrity_update(struct matryoshka_context *mc, struct matryo
             return error;
           }
         }
-        
 
         metadata_erasure_encode(mc, mio);
 
@@ -731,6 +732,8 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     return error;
   }
 
+  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after init_bios");
+
   for (i = 0; i < mc->num_entropy; ++i) {
     ret = submit_bio_wait(mio->entropy_bios[i]);
     if (ret) {
@@ -739,6 +742,8 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
       return error;
     }
   }
+
+  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after entropy read");
 
   for (i = 0; i < mc->num_carrier; ++i) {
     for (j = i + mc->num_entropy; i < mc->num_carrier + mc->num_entropy + 1; ++i) {
@@ -760,6 +765,8 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     }
   }
 
+  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after carrier read and erasure decoding");
+
   metadata = metadata_parse_bio(mc, mio->base_bio);
   if (metadata_verify(metadata, mc->cluster_size)) {
     metadata = metadata_init(mc->cluster_size);
@@ -767,6 +774,8 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     metadata_update_bio(mc, mio->base_bio, metadata);
 
     metadata_erasure_encode(mc, mio);
+
+    printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after erasure encoding for new metadata block");
 
     for (i = 0; i < mc->num_carrier; ++i) {
       bio_map_operation(mio->carrier_bios[i], WRITE);
@@ -779,6 +788,8 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
       }
     }
   }
+
+  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), existing metadata block is fine");
 
   if (mio) {
     error = mio->error;
