@@ -754,7 +754,9 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
       free_metadata_io(mc, mio);
       return error;
     }
-      
+
+    printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after Carrier: %d read", i);
+
     mio->error = metadata_erasure_decode(mc, mio);
     if (mio->error) {
       mio_update_erasures(mc, mio, i);
