@@ -204,6 +204,8 @@ int metadata_erasure_decode(struct matryoshka_context *mc, struct metadata_io *m
     }
   }
 
+  kfree(matrix);
+
   return status;
 }
 
@@ -266,6 +268,8 @@ void metadata_erasure_encode(struct matryoshka_context *mc, struct metadata_io *
       bio_advance_iter(mio->carrier_bios[i], &mio->iter_carrier[i], mc->sector_size);
     }
   }
+
+  kfree(matrix);
 }
 
 char* metadata_parse_bio(struct matryoshka_context *mc, struct bio *base_bio) {

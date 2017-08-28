@@ -259,6 +259,8 @@ int erasure_decode(struct matryoshka_context *mc, struct matryoshka_io *io) {
     }
   }
 
+  kfree(matrix);
+
   return status;
 }
 
@@ -321,6 +323,8 @@ void erasure_encode(struct matryoshka_context *mc, struct matryoshka_io *io) {
       bio_advance_iter(io->carrier_bios[i], &io->iter_carrier[i], mc->sector_size);
     }
   }
+
+  kfree(matrix);
 }
 
 inline void get_32bit_random_number(u32 *unum) {
