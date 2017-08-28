@@ -755,7 +755,7 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
       return error;
     }
 
-    printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after Carrier: %d read", i);
+    printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after Carrier read: %d read", i);
 
     mio->error = metadata_erasure_decode(mc, mio);
     if (mio->error) {
@@ -765,7 +765,7 @@ int matryoshka_metadata_init(struct matryoshka_context *mc) {
     }
   }
 
-  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after carrier read and erasure decoding");
+  printk(KERN_DEBUG "dm-matryoshka: matryoshka_metadata_init(), after erasure decoding");
 
   metadata = metadata_parse_bio(mc, mio->base_bio);
   if (metadata_verify(metadata, mc->cluster_size)) {
