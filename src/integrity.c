@@ -278,7 +278,7 @@ char* metadata_parse_bio(struct matryoshka_context *mc, struct bio *base_bio) {
 
   iter_base = base_bio->bi_iter;
   while (1) {
-    if (iter_base.bi_size) {
+    if (!iter_base.bi_size) {
       break;
     }
 
@@ -303,7 +303,7 @@ void metadata_update_bio(struct matryoshka_context *mc, struct bio *base_bio, ch
 
   iter_base = base_bio->bi_iter;
   while (1) {
-    if (iter_base.bi_size) {
+    if (!iter_base.bi_size) {
       break;
     }
 
