@@ -271,7 +271,7 @@ void metadata_erasure_encode(struct matryoshka_context *mc, struct metadata_io *
 char* metadata_parse_bio(struct matryoshka_context *mc, struct bio *base_bio) {
   char *metadata = kmalloc(mc->cluster_size, GFP_KERNEL);
   char *buffer;
-  int seek;
+  int seek = 0;
 
   struct bvec_iter iter_base;
   struct bio_vec base_vec;
@@ -296,7 +296,7 @@ char* metadata_parse_bio(struct matryoshka_context *mc, struct bio *base_bio) {
 
 void metadata_update_bio(struct matryoshka_context *mc, struct bio *base_bio, char *metadata) {
   char *buffer;
-  int seek;
+  int seek = 0;
 
   struct bvec_iter iter_base;
   struct bio_vec base_vec;
